@@ -3,6 +3,40 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
+# 0. 비밀번호 보안 설정 (가장 위에 넣으세요)
+# ---------------------------------------------------------
+def check_password():
+    """Returns `True` if the user had the correct password."""
+
+    # 비밀번호가 맞았는지 확인하는 함수
+    def password_entered():
+        if st.session_state["password"] == st.secrets["password"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # 보안을 위해 입력값 삭제
+        else:
+            st.session_state["password_correct"] = False
+
+    # 이미 인증된 상태라면 True 반환
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # 비밀번호 입력창 띄우기
+    st.set_page_config(page_title="🔒 로그인 필요", layout="centered")
+    st.markdown("## 🔒 접근 제한 구역")
+    st.text_input(
+        "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+    )
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("❌ 비밀번호가 틀렸습니다.")
+        
+    return False
+
+# 비밀번호가 틀리면 여기서 프로그램 실행 중단 (아래 코드는 실행 안 됨)
+if not check_password():
+    st.stop()
+    
+# ---------------------------------------------------------
 # 1. 기본 설정 & 스타일
 # ---------------------------------------------------------
 current_version = "v4.0 (Final Complete)"
