@@ -3,27 +3,27 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
-# 1. 기본 설정 (사이드바 강제 확장 설정 추가)
+# 1. 기본 설정 (무조건 맨 위)
 # ---------------------------------------------------------
-current_version = "v5.3 (Sidebar Fixed)"
+current_version = "v6.0 (UI Force)"
 st.set_page_config(
     page_title=f"수익성 분석기 {current_version}", 
     layout="wide",
-    initial_sidebar_state="expanded"  # 👈 [중요] 사이드바를 항상 펼쳐둠
+    initial_sidebar_state="expanded" # 사이드바 강제 펼침
 )
 
 # ---------------------------------------------------------
-# 2. 🔒 보안 구역
+# 2. 🔒 보안 구역 (로그인 체크)
 # ---------------------------------------------------------
 def check_password():
-    """비밀번호 확인 및 로그인 처리"""
+    """비밀번호가 맞으면 True, 아니면 False 후 중단"""
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
 
     if st.session_state.password_correct:
         return True
 
-    # --- 로그인 화면 ---
+    # 로그인 창 UI
     st.markdown("## 🔒 관계자 외 접근 금지")
     st.info("보안을 위해 비밀번호를 입력해주세요.")
     
@@ -38,52 +38,55 @@ def check_password():
 
     return False
 
+# 비밀번호 틀리면 여기서 코드 올 스톱 (아래 내용 실행 안 됨)
 if not check_password():
     st.stop()
 
 # =========================================================
-# 🔓 로그인 성공 후 실행되는 영역
+# 🚩 (중요) 로그인 성공 직후, 가장 먼저 UI부터 그립니다
 # =========================================================
 
-# ---------------------------------------------------------
-# 3. 로그아웃 버튼 (사이드바 + 메인 상단 동시 배치)
-# ---------------------------------------------------------
-def logout():
-    st.session_state.password_correct = False
-    st.rerun()
-
-# [1] 사이드바에 로그아웃 버튼 배치
+# 1. 사이드바 강제 생성
 with st.sidebar:
-    st.title("⚙️ 설정")
-    st.write(f"현재 버전: {current_version}")
-    st.write("---")
-    if st.button("🔒 로그아웃 (사이드바)", key='logout_sidebar'):
-        logout()
+    st.title("⚙️ 관리자 메뉴")
+    st.success("✅ 로그인됨")
+    st.write(f"버전: {current_version}")
+    
+    st.markdown("---")
+    # 사이드바 로그아웃 버튼
+    if st.button("🔒 로그아웃 (사이드바)", use_container_width=True):
+        st.session_state.password_correct = False
+        st.rerun()
 
-# [2] 메인 화면 우측 상단에도 로그아웃 버튼 배치 (혹시 사이드바 안 보일까봐)
-col_main_title, col_logout = st.columns([8, 2])
-with col_main_title:
-    st.title(f"📊 멀티 수익성 분석기")
+# 2. 메인 화면 상단 (제목 + 우측 상단 로그아웃 버튼)
+col_title, col_logout = st.columns([8, 2])
+
+with col_title:
+    st.title("📊 멀티 수익성 분석기")
+    st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
+
 with col_logout:
-    st.write("") # 줄바꿈용
-    st.write("") 
-    if st.button("🔒 로그아웃", key='logout_main'):
-        logout()
+    st.write("") # 줄바꿈으로 높이 맞추기
+    # 메인 화면 로그아웃 버튼
+    if st.button("🔒 로그아웃", key='top_logout', use_container_width=True):
+        st.session_state.password_correct = False
+        st.rerun()
 
-st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
+st.divider() # 구분선
 
+# =========================================================
+# 📂 데이터 로딩 및 계산 로직 (UI 구성 후 실행)
+# =========================================================
+
+# 스타일 정의
 st.markdown("""
     <style>
-    /* 버튼 스타일 통일 */
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
+    .stButton>button { border-radius: 8px; font-weight: bold; }
     th { text-align: center !important; }
     td { text-align: center !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# 4. 데이터 불러오기
-# ---------------------------------------------------------
 @st.cache_data
 def load_data():
     file_path = "products.csv"
@@ -108,14 +111,12 @@ def load_data():
 
 df_products = load_data()
 
-# ---------------------------------------------------------
-# 5. 입력 및 계산 UI
-# ---------------------------------------------------------
-with st.container():
-    st.write("🔻 **추가로 비교할 할인율을 선택하세요**")
-    selected_rates = st.multiselect("할인율(%)", options=range(0, 95, 5), default=[])
-    st.markdown("---")
+# 할인율 선택 (전역)
+st.write("🔻 **비교할 추가 할인율 선택**")
+selected_rates = st.multiselect("할인율(%)", options=range(0, 95, 5), default=[])
+st.write("")
 
+# 탭 구성 함수
 def render_input_tab(tab_idx):
     mode = st.radio(f"입력 방식 ({tab_idx})", ["📝 직접 입력", "📂 DB 불러오기"], key=f"mode_{tab_idx}", label_visibility="collapsed")
 
@@ -124,8 +125,7 @@ def render_input_tab(tab_idx):
             st.warning("데이터 파일 없음")
             return None
         
-        # X 버튼으로 삭제 가능한 검색창
-        sel = st.multiselect("제품 검색 (X 눌러서 삭제)", df_products['name'].tolist(), max_selections=1, key=f"search_{tab_idx}")
+        sel = st.multiselect("제품 검색 (X 버튼으로 삭제)", df_products['name'].tolist(), max_selections=1, key=f"search_{tab_idx}", placeholder="제품명을 검색하세요")
         
         if sel:
             name = sel[0]
@@ -148,6 +148,7 @@ def render_input_tab(tab_idx):
             if prices: return {"type": "manual", "name": name or f"제품{tab_idx}", "cost": cost, "prices": prices, "fixed_discount": None}
     return None
 
+# 탭 렌더링
 t1, t2, t3 = st.tabs(["🛍️ 제품 1", "🛍️ 제품 2", "🛍️ 제품 3"])
 items = []
 with t1: 
@@ -157,10 +158,10 @@ with t2:
 with t3: 
     if (r:=render_input_tab(3)): items.append(r)
 
-# ---------------------------------------------------------
-# 6. 계산 실행
-# ---------------------------------------------------------
-if st.button("🚀 수익성 분석 실행", type="primary"):
+st.markdown("---")
+
+# 실행 버튼
+if st.button("🚀 수익성 분석 실행", type="primary", use_container_width=True):
     if not items:
         st.warning("제품을 선택해주세요.")
     else:
