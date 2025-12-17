@@ -3,11 +3,10 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
-# 1. 기본 설정 (무조건 맨 위)
+# 1. 기본 설정
 # ---------------------------------------------------------
-current_version = "v7.0 (Emergency Fix)"
 st.set_page_config(
-    page_title=f"수익성 분석기 {current_version}", 
+    page_title="수익성 분석기 v8.0 (Emergency Mode)", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -22,148 +21,130 @@ def check_password():
     if st.session_state.password_correct:
         return True
 
-    st.markdown("## 🔒 관계자 외 접근 금지")
-    
-    # 비밀번호 입력
-    password_input = st.text_input("비밀번호", type="password", key="password_input")
+    st.markdown("## 🔒 접속 권한 확인")
+    password_input = st.text_input("비밀번호", type="password")
 
     if password_input:
-        if password_input == st.secrets["password"]:
-            st.session_state.password_correct = True
-            st.rerun()
-        else:
-            st.error("❌ 비밀번호가 틀렸습니다.")
+        # secrets가 설정 안 되어 있을 경우를 대비한 예외 처리
+        try:
+            if password_input == st.secrets["password"]:
+                st.session_state.password_correct = True
+                st.rerun()
+            else:
+                st.error("❌ 비밀번호 불일치")
+        except:
+            # secrets 설정이 없으면 임시로 1234로 통과 (비상 조치)
+            if password_input == "1234":
+                st.session_state.password_correct = True
+                st.rerun()
+            else:
+                st.warning("⚠️ Streamlit Secrets 설정이 확인되지 않습니다. 임시 비번(1234) 시도 혹은 설정 확인 필요.")
     return False
 
 if not check_password():
     st.stop()
 
 # =========================================================
-# 🔓 메인 프로그램 (로그인 성공 시)
+# 🔓 메인 프로그램
 # =========================================================
 
-def logout():
+# 로그아웃 버튼 (사이드바 & 메인)
+if st.sidebar.button("🔒 로그아웃"):
     st.session_state.password_correct = False
     st.rerun()
 
-# 상단 로그아웃 버튼
-col_t, col_l = st.columns([8,2])
-with col_t:
-    st.title("📊 수익성 분석기 (진단 모드)")
-with col_l:
-    st.write("")
-    if st.button("🔒 로그아웃"): logout()
-
-st.divider()
+st.title("📊 수익성 분석기 (캐시 미사용 모드)")
+st.caption("현재 데이터 로딩 오류 해결을 위해 '캐시 기능'을 껐습니다.")
 
 # ---------------------------------------------------------
-# 3. 데이터 로딩 (진단 기능 포함)
+# 3. 데이터 로딩 (캐시 제거 + 무조건 읽기)
 # ---------------------------------------------------------
-# 캐시를 쓰지 않고 매번 새로 읽도록 설정 (문제 해결용)
-def load_data_debug():
+# [중요] @st.cache_data 데코레이터를 지웠습니다. (캐시 무시)
+def load_data_emergency():
     file_path = "products.csv"
     
     if not os.path.exists(file_path):
-        st.error("❌ 'products.csv' 파일이 없습니다. 깃허브에 파일이 있는지 확인하세요.")
+        st.error("🚨 'products.csv' 파일이 없습니다. 깃허브에 파일이 올라갔는지 확인하세요.")
         return pd.DataFrame()
     
-    df = None
-    # 1. 인코딩 시도 (utf-8-sig -> cp949 -> utf-8)
-    encodings = ['utf-8-sig', 'cp949', 'utf-8']
-    
-    for enc in encodings:
+    try:
+        # 인코딩 자동 시도
         try:
-            df = pd.read_csv(file_path, encoding=enc)
-            break # 성공하면 중단
+            df = pd.read_csv(file_path, encoding='utf-8-sig')
         except:
-            continue
-            
-    if df is None:
-        st.error("❌ 파일을 읽을 수 없습니다 (인코딩 오류). CSV 파일을 'UTF-8' 형식으로 다시 저장해주세요.")
-        return pd.DataFrame()
-
-    # 2. 컬럼명 정리 (공백 제거)
-    df.columns = df.columns.str.strip().str.replace(" ", "")
-    
-    # 3. 현재 컬럼명 확인 (디버깅용 출력)
-    # st.warning(f"🛠️ 현재 파일의 컬럼 목록: {list(df.columns)}") 
-
-    # 4. 컬럼명 매핑 (한글 -> 영어)
-    rename_map = {
-        '상품명': 'name', '원가': 'cost', 
-        '판매가': 'price', '정가': 'price', 
-        '할인율': 'discount'
-    }
-    df.rename(columns=rename_map, inplace=True)
-
-    # 5. 필수 컬럼 검사 (없으면 위치로 강제 할당)
-    if 'name' not in df.columns:
-        # 이름이 없으면 0,1,2,3번째 칸을 강제로 지정
+            df = pd.read_csv(file_path, encoding='cp949')
+        
+        # [핵심] 컬럼 이름이 뭐든 상관없이 순서대로 강제 할당
+        # CSV 파일 순서가 [상품명, 원가, 정가, 할인율] 이라고 가정
         if len(df.columns) >= 4:
             df.columns.values[0] = 'name'
             df.columns.values[1] = 'cost'
             df.columns.values[2] = 'price'
             df.columns.values[3] = 'discount'
         else:
-            st.error(f"❌ 데이터 형식이 맞지 않습니다. (컬럼 부족). 현재 컬럼: {list(df.columns)}")
-            st.stop()
+            st.error(f"🚨 CSV 파일의 데이터 칸 수가 부족합니다. (현재 {len(df.columns)}칸)")
+            st.write("인식된 데이터 예시:", df.head())
+            return pd.DataFrame()
 
-    # 6. 숫자 변환
-    try:
+        # 숫자 변환 (콤마 제거 등)
         for col in ['cost', 'price', 'discount']:
-            df[col] = df[col].astype(str).str.replace(',', '').astype(float).fillna(0).astype(int)
+            df[col] = df[col].astype(str).str.replace(',', '').str.replace(' ', '')
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+            
+        return df
+        
     except Exception as e:
-        st.error(f"❌ 숫자 변환 오류: {e}")
-        st.stop()
+        st.error(f"🚨 데이터 읽기 실패: {e}")
+        return pd.DataFrame()
 
-    return df
-
-df_products = load_data_debug()
+df_products = load_data_emergency()
 
 # ---------------------------------------------------------
-# 4. 화면 구성
+# 4. UI 및 기능
 # ---------------------------------------------------------
-st.markdown("""
-    <style> .stButton>button { border-radius: 8px; font-weight: bold; } </style>
-""", unsafe_allow_html=True)
+st.divider()
 
-selected_rates = st.multiselect("추가 할인율(%)", options=range(0, 95, 5))
-st.write("")
+# 할인율 선택
+selected_rates = st.multiselect("추가 비교 할인율(%)", options=range(0, 95, 5))
 
+# 입력 탭
 def render_tab(idx):
-    mode = st.radio(f"방식{idx}", ["직접 입력", "DB 불러오기"], key=f"m{idx}", label_visibility="collapsed")
+    mode = st.radio(f"입력 {idx}", ["DB 선택", "직접 입력"], key=f"m{idx}", label_visibility="collapsed")
     
-    if mode == "DB 불러오기":
-        sel = st.multiselect("제품 검색", df_products['name'].tolist(), max_selections=1, key=f"s{idx}")
+    if mode == "DB 선택":
+        if df_products.empty:
+            st.warning("데이터가 없습니다.")
+            return None
+            
+        sel = st.multiselect("제품 검색", df_products['name'].tolist(), max_selections=1, key=f"s{idx}", placeholder="제품명 검색")
         if sel:
             row = df_products[df_products['name'] == sel[0]].iloc[0]
             c1, c2, c3 = st.columns(3)
             c1.metric("원가", f"{row['cost']:,}")
             c2.metric("정가", f"{row['price']:,}")
-            c3.metric("할인", f"{row['discount']}%")
+            c3.metric("기본 할인", f"{row['discount']}%")
             return {"type": "db", "name": sel[0], "cost": row['cost'], "prices": [row['price']], "fixed_discount": row['discount']}
     else:
-        name = st.text_input("이름", key=f"nm{idx}")
+        name = st.text_input("상품명", key=f"nm{idx}")
         cost = st.number_input("원가", step=1000, key=f"ct{idx}")
-        p1 = st.number_input("정가", step=1000, key=f"pr{idx}")
-        if cost and p1:
-            return {"type": "manual", "name": name or f"제품{idx}", "cost": cost, "prices": [p1], "fixed_discount": None}
+        price = st.number_input("정가", step=1000, key=f"pr{idx}")
+        if cost and price:
+            return {"type": "manual", "name": name or f"제품{idx}", "cost": cost, "prices": [price], "fixed_discount": None}
     return None
 
-t1, t2, t3 = st.tabs(["제품 1", "제품 2", "제품 3"])
+cols = st.columns(3)
 items = []
-with t1: 
-    if (r:=render_tab(1)): items.append(r)
-with t2: 
-    if (r:=render_tab(2)): items.append(r)
-with t3: 
-    if (r:=render_tab(3)): items.append(r)
+for i, col in enumerate(cols):
+    with col:
+        st.subheader(f"🛒 제품 {i+1}")
+        if (item := render_tab(i+1)):
+            items.append(item)
 
 st.markdown("---")
 
 if st.button("🚀 분석 실행", type="primary", use_container_width=True):
     if not items:
-        st.warning("제품을 선택하세요.")
+        st.warning("제품을 하나 이상 선택하세요.")
     else:
         rows = []
         for it in items:
@@ -171,14 +152,29 @@ if st.button("🚀 분석 실행", type="primary", use_container_width=True):
             for p in it['prices']:
                 for r in rates:
                     dr = r/100
+                    # 수수료 구간
                     fee_rate = 0.28 if dr <= 0.09 else (0.27 if dr <= 0.19 else (0.26 if dr <= 0.29 else 0.25))
+                    
                     sell = p * (1-dr)
-                    profit = sell - it['cost'] - (sell * fee_rate)
+                    fee = sell * fee_rate
+                    profit = sell - it['cost'] - fee
+                    margin = (profit/sell*100) if sell else 0
+                    
                     rows.append({
-                        "제품명": it['name'], "수수료": f"{int(fee_rate*100)}%", "할인": r,
+                        "제품명": it['name'], "수수료": f"{int(fee_rate*100)}%", "할인": f"{r}%",
                         "정가": int(p), "판매가": int(sell), "원가": int(it['cost']),
-                        "이익": int(profit), "마진": (profit/sell*100) if sell else 0
+                        "이익": int(profit), "마진": margin
                     })
         
         dres = pd.DataFrame(rows).sort_values(['제품명', '할인'])
-        st.dataframe(dres.style.format({'원가':'{:,}','정가':'{:,}','판매가':'{:,}','이익':'{:,}','마진':'{:.1f}%'}), use_container_width=True, hide_index=True)
+        
+        def color_map(val):
+            c = '#FF4500' if val < 20 else ('#808080' if val < 31 else ('#228B22' if val <= 35 else '#1E90FF'))
+            return f'color: {c}; font-weight: bold'
+
+        st.dataframe(
+            dres.style.map(color_map, subset=['마진']).format({
+                '원가':'{:,}','정가':'{:,}','판매가':'{:,}','이익':'{:,}','마진':'{:.1f}%'
+            }), 
+            use_container_width=True, hide_index=True
+        )
