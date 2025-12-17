@@ -5,7 +5,7 @@ import os
 # ---------------------------------------------------------
 # 1. 버전 관리 & 설정
 # ---------------------------------------------------------
-current_version = "v3.2 (Hybrid Discount)"
+current_version = "v3.3 (Final Fix)"
 st.set_page_config(page_title=f"수익성 계산기 {current_version}", layout="wide")
 
 st.markdown("""
@@ -68,21 +68,24 @@ def render_input_tab(tab_idx):
             return None
             
         options = df_products['name'].tolist()
+        # 검색 기능이 있는 선택박스
         selection = st.selectbox("제품 검색 및 선택", options, key=f"sel_{tab_idx}")
-        row = df_products[df_products['name'] == selection].iloc[0]
         
-        c1, c2, c3 = st.columns(3)
-        c1.metric("원가", f"{row['cost']:,}원")
-        c2.metric("정가", f"{row['price']:,}원")
-        c3.metric("기본 할인율", f"{row['discount']}%") # 단순 표시용
-        
-        return {
-            "type": "db",
-            "name": selection,
-            "cost": row['cost'],
-            "prices": [row['price']],
-            "fixed_discount": row['discount']
-        }
+        if selection:
+            row = df_products[df_products['name'] == selection].iloc[0]
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("원가", f"{row['cost']:,}원")
+            c2.metric("정가", f"{row['price']:,}원")
+            c3.metric("기본 할인율", f"{row['discount']}%")
+            
+            return {
+                "type": "db",
+                "name": selection,
+                "cost": row['cost'],
+                "prices": [row['price']],
+                "fixed_discount": row['discount']
+            }
 
     else:
         p_name = st.text_input(f"제품명 ({tab_idx})", placeholder="직접 입력", key=f"name_{tab_idx}")
@@ -117,4 +120,86 @@ with tab3:
     if r3: products_to_calc.append(r3)
 
 # ---------------------------------------------------------
-#
+# 4. 계산 로직
+# ---------------------------------------------------------
+def calculate_all(product_list, manual_rates):
+    base_fee = 0.28
+    results = []
+    
+    manual_rates.sort()
+
+    for item in product_list:
+        # 할인율 병합 로직
+        if item['type'] == 'db':
+            rates_set = {item['fixed_discount']}
+            if manual_rates:
+                rates_set.update(manual_rates)
+            target_rates = sorted(list(rates_set))
+        else:
+            target_rates = manual_rates if manual_rates else [0]
+
+        for price in item['prices']:
+            if price == 0: continue
+            for dc_percent in target_rates:
+                discount_rate = dc_percent / 100.0
+                
+                # 수수료
+                if discount_rate <= 0.09: applied_fee_rate = base_fee; fee_note = "28%"
+                elif discount_rate <= 0.19: applied_fee_rate = base_fee - 0.01; fee_note = "27%"
+                elif discount_rate <= 0.29: applied_fee_rate = base_fee - 0.02; fee_note = "26%"
+                else: applied_fee_rate = base_fee - 0.03; fee_note = "25%"
+
+                sell_price = price * (1 - discount_rate)
+                fee = sell_price * applied_fee_rate
+                
+                # [중요 수정] profit 계산 시 item['cost'] 사용
+                profit = sell_price - item['cost'] - fee
+
+                margin_rate = (profit / sell_price) * 100 if sell_price > 0 else 0
+                roi = (profit / item['cost']) * 100 if item['cost'] > 0 else 0
+                
+                results.append({
+                    "제품명": item['name'],
+                    "수수료": fee_note,
+                    "할인": dc_percent,     
+                    "정가": int(price),
+                    "판매가": int(sell_price),
+                    "원가": int(item['cost']),
+                    "이익": int(profit),
+                    "ROI": roi,
+                    "마진": margin_rate
+                })
+    
+    df = pd.DataFrame(results)
+    if not df.empty:
+        df = df.sort_values(by=['제품명', '할인'])
+        cols = ["제품명", "수수료", "할인", "정가", "판매가", "원가", "이익", "ROI", "마진"]
+        df = df[cols]
+    return df
+
+def color_margin_rows(val):
+    color = '#FF4500'
+    if val > 35: color = '#1E90FF' 
+    elif 31 <= val <= 35: color = '#228B22' 
+    elif 25 <= val < 31: color = '#808080' 
+    elif 20 <= val < 25: color = '#FF8C00' 
+    return f'color: {color}; font-weight: bold'
+
+# 버튼이 여기 있습니다! 위에서 에러가 안 나야 이 버튼이 보입니다.
+if st.button("분석 결과 보기"):
+    if not products_to_calc:
+        st.error("입력된 제품이 없습니다. (DB 불러오기 후 정가가 0원이면 csv 파일을 확인하세요)")
+    else:
+        df_res = calculate_all(products_to_calc, selected_rates)
+        if not df_res.empty:
+            st.success(f"✅ 총 {len(products_to_calc)}개 제품 분석 완료")
+            st.dataframe(
+                df_res.style.map(color_margin_rows, subset=['마진']).format({
+                    '원가': '{:,}', '정가': '{:,}', '할인': '{}%', 
+                    '판매가': '{:,}', '이익': '{:,}', 
+                    '마진': '{:.1f}%', 'ROI': '{:.0f}%'
+                }),
+                use_container_width=True, hide_index=True
+            )
+        else:
+            st.warning("결과를 계산할 수 없습니다.")
