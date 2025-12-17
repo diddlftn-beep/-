@@ -3,56 +3,42 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
-# 1. 기본 설정 (반드시 맨 윗줄에 있어야 함)
+# 1. 기본 설정 (무조건 맨 윗줄!)
 # ---------------------------------------------------------
-current_version = "v5.0 (Security + UX Fix)"
+current_version = "v5.1 (Security First)"
 st.set_page_config(page_title=f"수익성 분석기 {current_version}", layout="wide")
 
 # ---------------------------------------------------------
-# 2. 비밀번호 보안 설정 함수
+# 2. 🔒 보안 구역 (여기서 통과 못하면 아래 코드는 실행조차 안 됨)
 # ---------------------------------------------------------
 def check_password():
-    """비밀번호가 맞으면 True, 아니면 False를 반환"""
-    
-    # 세션 상태에 로그인 정보가 없으면 초기화
-    if "password_correct" not in st.session_state:
-        st.session_state.password_correct = False
-
-    # 비밀번호 입력 함수
-    def password_entered():
-        # Streamlit Secrets에 저장된 비번과 비교
-        if st.session_state["password_input"] == st.secrets["password"]:
-            st.session_state.password_correct = True
-            del st.session_state["password_input"]  # 입력한 비번 삭제 (보안)
-        else:
-            st.session_state.password_correct = False
-
-    # 이미 로그인이 성공한 상태라면 True 반환
-    if st.session_state.password_correct:
+    """비밀번호 확인 함수"""
+    # 1. 이미 인증된 상태인지 확인
+    if st.session_state.get("password_correct", False):
         return True
 
-    # --- 로그인 화면 ---
-    st.markdown("## 🔒 접근 제한 구역")
-    st.text_input(
-        "비밀번호를 입력하세요", 
-        type="password", 
-        on_change=password_entered, 
-        key="password_input"
-    )
+    # 2. 비밀번호 입력 UI 보여주기
+    st.markdown("## 🔒 관계자 외 접근 금지")
+    st.info("보안을 위해 비밀번호를 입력해야 접속할 수 있습니다.")
     
-    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
-        # 처음 실행이 아니고(입력을 시도했고) 틀렸을 때만 에러 표시
-        if "password_input" not in st.session_state: 
-             st.error("❌ 비밀번호가 틀렸습니다.")
-        
+    password_input = st.text_input("비밀번호", type="password", key="password_input")
+
+    # 3. 비밀번호 검증 로직
+    if password_input:
+        if password_input == st.secrets["password"]:
+            st.session_state["password_correct"] = True
+            st.rerun()  # 맞으면 화면 새로고침해서 접속 시켜줌
+        else:
+            st.error("❌ 비밀번호가 틀렸습니다.")
+
     return False
 
-# [중요] 비밀번호 체크가 통과되지 않으면 여기서 코드 실행을 멈춤
+# [핵심] 여기서 False가 나오면 스크립트 강제 종료 (st.stop)
 if not check_password():
-    st.stop()
+    st.stop()  # ⛔ 여기서 멈춤! 아래 코드는 절대 실행 안 됨
 
 # =========================================================
-#  🔓 로그인 성공 시 아래 코드가 실행됩니다
+# 🔓 로그인 성공한 사람만 볼 수 있는 진짜 코드 시작
 # =========================================================
 
 st.markdown("""
@@ -65,7 +51,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. 데이터 불러오기 (영어 헤더 자동 변환 포함)
+# 3. 데이터 불러오기
 # ---------------------------------------------------------
 @st.cache_data
 def load_data():
@@ -76,29 +62,23 @@ def load_data():
     
     try:
         df = pd.read_csv(file_path)
-        
-        # 컬럼명 공백 제거 및 소문자 변환
         df.columns = df.columns.str.strip().str.lower()
         
-        # 한글 헤더가 있어도 영어로 자동 매핑
         rename_map = {
             '상품명': 'name', '원가': 'cost', '판매가': 'price', '정가': 'price', '할인율': 'discount'
         }
         df = df.rename(columns=rename_map)
         
-        # 필수 컬럼 체크
         required_cols = ['name', 'cost', 'price', 'discount']
         for col in required_cols:
             if col not in df.columns:
-                st.error(f"❌ CSV 파일 오류: '{col}' 컬럼을 찾을 수 없습니다.")
+                st.error(f"❌ 데이터 파일 오류: '{col}' 항목이 없습니다.")
                 return pd.DataFrame()
 
-        # 숫자 데이터 변환 (콤마 제거)
         for col in ['cost', 'price', 'discount']:
             df[col] = df[col].astype(str).str.replace(',', '').astype(float).fillna(0).astype(int)
             
         return df
-        
     except Exception as e:
         st.error(f"❌ 데이터 로딩 중 오류: {e}")
         return pd.DataFrame()
@@ -106,7 +86,7 @@ def load_data():
 df_products = load_data()
 
 # ---------------------------------------------------------
-# 4. 메인 화면 구성
+# 4. 메인 화면
 # ---------------------------------------------------------
 st.title(f"📊 멀티 수익성 분석기 ({current_version})")
 st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
@@ -118,7 +98,7 @@ with st.container():
     st.markdown("---")
 
 # ---------------------------------------------------------
-# 5. 입력 탭 (Multiselect 적용)
+# 5. 입력 탭
 # ---------------------------------------------------------
 def render_input_tab(tab_idx):
     mode = st.radio(
@@ -133,11 +113,10 @@ def render_input_tab(tab_idx):
             st.warning("데이터 파일이 없습니다.")
             return None
             
-        # [수정됨] X 버튼으로 쉽게 지울 수 있는 검색창
         product_selection = st.multiselect(
             "제품 검색 (X 눌러서 삭제)",
             options=df_products['name'].tolist(),
-            max_selections=1,  # 하나만 선택 가능
+            max_selections=1,
             placeholder="제품명을 입력하세요",
             key=f"search_{tab_idx}"
         )
@@ -162,7 +141,7 @@ def render_input_tab(tab_idx):
             st.info("👆 제품을 검색해주세요.")
             return None
 
-    else: # 직접 입력
+    else:
         p_name = st.text_input(f"제품명", placeholder="예: 신상품 A", key=f"name_{tab_idx}")
         p_cost = st.number_input(f"원가", value=None, step=1000, key=f"cost_{tab_idx}")
         
@@ -183,7 +162,6 @@ def render_input_tab(tab_idx):
                 }
     return None
 
-# 탭 생성
 tab1, tab2, tab3 = st.tabs(["🛍️ 제품 1", "🛍️ 제품 2", "🛍️ 제품 3"])
 products_to_calc = []
 
@@ -198,7 +176,7 @@ with tab3:
     if r3: products_to_calc.append(r3)
 
 # ---------------------------------------------------------
-# 6. 계산 로직 및 결과
+# 6. 계산 로직
 # ---------------------------------------------------------
 def calculate_results(product_list, compare_rates):
     base_fee = 0.28
@@ -218,7 +196,6 @@ def calculate_results(product_list, compare_rates):
             for dc_percent in target_rates:
                 discount_rate = dc_percent / 100.0
                 
-                # 수수료 구간
                 if discount_rate <= 0.09: applied_fee_rate = base_fee; fee_note = "28%"
                 elif discount_rate <= 0.19: applied_fee_rate = base_fee - 0.01; fee_note = "27%"
                 elif discount_rate <= 0.29: applied_fee_rate = base_fee - 0.02; fee_note = "26%"
