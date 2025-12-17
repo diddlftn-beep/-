@@ -4,13 +4,14 @@ import pandas as pd
 # 페이지 설정
 st.set_page_config(page_title="브랜디드 수익성 계산기", layout="wide")
 
-# 스타일 조정 (버튼 및 폰트)
+# 스타일 조정 (가운데 정렬 + 폰트)
 st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; background-color: #FF4B4B; color: white; }
     div[data-testid="stExpander"] div[role="button"] p { font-size: 1.1rem; font-weight: bold; }
-    /* 표 헤더(제목) 가운데 정렬 */
+    /* 표 헤더 및 데이터 가운데 정렬 */
     th { text-align: center !important; }
+    td { text-align: center !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -77,7 +78,7 @@ with tab3:
 
 
 # ---------------------------------------------------------
-# 3. 계산 및 색상 로직
+# 3. 계산 및 정렬 로직 (핵심 수정 부분)
 # ---------------------------------------------------------
 def calculate_all(product_list, rates):
     base_fee = 0.28
@@ -92,6 +93,7 @@ def calculate_all(product_list, rates):
             for dc_percent in rates:
                 discount_rate = dc_percent / 100.0
                 
+                # 수수료 로직
                 if discount_rate <= 0.09:       
                     applied_fee_rate = base_fee; fee_note = "28%"
                 elif discount_rate <= 0.19:     
@@ -108,11 +110,10 @@ def calculate_all(product_list, rates):
                 margin_rate = (profit / sell_price) * 100 if sell_price > 0 else 0
                 roi = (profit / cost_price) * 100 if cost_price > 0 else 0
                 
-                # 순서 변경: 제품명, 수수료, 할인, 정가, 판매가, 원가, 이익, ROI, 마진
                 results.append({
                     "제품명": p_name,
                     "수수료": fee_note,
-                    "할인": dc_percent,
+                    "할인": dc_percent,     # 정렬을 위해 숫자(int)로 저장
                     "정가": int(price),
                     "판매가": int(sell_price),
                     "원가": cost_price,
@@ -121,11 +122,17 @@ def calculate_all(product_list, rates):
                     "마진": margin_rate
                 })
     
-    # 데이터프레임 생성 시 컬럼 순서 강제 지정
     df = pd.DataFrame(results)
+    
     if not df.empty:
+        # [핵심] 제품명으로 1차 정렬, 그 안에서 할인율로 2차 정렬 (오름차순)
+        # 이렇게 해두면 표에서 '제품명' 헤더를 눌렀을 때 이 순서가 유지됩니다.
+        df = df.sort_values(by=['제품명', '할인'], ascending=[True, True])
+        
+        # 컬럼 순서 지정
         cols = ["제품명", "수수료", "할인", "정가", "판매가", "원가", "이익", "ROI", "마진"]
         df = df[cols]
+        
     return df
 
 def color_margin_rows(val):
@@ -150,12 +157,12 @@ if st.button("분석 결과 보기 (터치)"):
         df = calculate_all(products, selected_rates)
         st.success(f"✅ 총 {len(products)}개 제품 분석 완료")
         
-        # 스타일 적용 (색상 + 포맷 + 가운데 정렬)
+        # 스타일 적용
         styled_df = df.style.map(color_margin_rows, subset=['마진'])\
             .format({
                 '원가': '{:,}',
                 '정가': '{:,}',
-                '할인': '{}%',
+                '할인': '{}%',  # 숫자는 그대로 두고 보여줄 때만 % 붙임
                 '판매가': '{:,}',
                 '이익': '{:,}',
                 '마진': '{:.1f}%',
