@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # 페이지 설정
-st.set_page_config(page_title="브랜디드 수익성 계산기", layout="wide")
+st.set_page_config(page_title="브랜디드 정가 비교", layout="wide")
 
 # 스타일 조정 (모바일 최적화)
 st.markdown("""
@@ -12,7 +12,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 수익성 분석기 (정렬 패치됨)")
+st.title("📊 수익성 분석기 (v1.0)")
 st.caption("헤더를 누르면 이제 숫자가 올바르게 정렬됩니다.")
 
 # 입력 폼
