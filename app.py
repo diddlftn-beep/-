@@ -5,12 +5,12 @@ import pandas as pd
 st.set_page_config(page_title="브랜디드 수익성 계산기", layout="wide")
 
 # 스타일 조정 (모바일 최적화)
-st.markdown(\"\"\"
+st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; background-color: #FF4B4B; color: white; }
     div[data-testid="stExpander"] div[role="button"] p { font-size: 1.1rem; font-weight: bold; }
     </style>
-\"\"\", unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 st.title("📊 수익성 분석기 (Mobile)")
 st.caption("원가와 정가안을 입력하면 수수료/마진을 자동 분석합니다.")
