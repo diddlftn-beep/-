@@ -1,594 +1,24 @@
 import streamlit as st
 import pandas as pd
-import io
 
 # ---------------------------------------------------------
-# 0. 내 제품 리스트 (여기에 변환된 코드를 붙여넣으세요)
+# 0. 내 제품 리스트 (제품명, 원가, 정가, 할인율)
 # ---------------------------------------------------------
+# 구조: "제품명": {"cost": 원가, "price": 정가, "discount": 저장된할인율}
 MY_DATABASE = {
-    # 예시 데이터 (지우고 변환된 걸 붙여넣으세요)
-    "[DESK] [THOMAS MASON] OFFICE SHIRT": 85882,
-"[DESK] BASIC STRIPE TIE [NAVY]": 15992,
-"[DESK] BASIC WOOL TIE [BLACK]": 15992,
-"[DESK] GRAND CRU WOOL MOCK-NECK KNIT [BLACK]": 42850,
-"[DESK] GRAND CRU WOOL MOCK-NECK KNIT [CHARCOAL]": 42850,
-"[DESK] GRAND CRU WOOL V-NECK KNIT [CHARCOAL]": 46238,
-"[DESK] GRAND CRU WOOL V-NECK KNIT [DARK NAVY]": 46238,
-"[DESK] GRAND CRU WOOL V-NECK KNIT [DEEP BROWN]": 46238,
-"[DESK] GRAND CRU WOOL V-NECK KNIT [MELANGE GRAY]": 46238,
-"[DESK] GRAND CRU WOOL V-NECK KNIT [SILVER BLUE]": 46238,
-"[DESK] NATURAL CHINO JACKET [WASHED BLACK]": 58290,
-"[DESK] NATURAL CHINO JACKET [WASHED CHARCOAL]": 72986,
-"[DESK] NATURAL CHINO JACKET [WASHED NAVY]": 88629,
-"[DESK] NATURAL CHINO PANTS [LIGHT BEIGE]": 61974,
-"[DESK] NATURAL CHINO PANTS [WASHED BEIGE]": 54329,
-"[DESK] NATURAL CHINO PANTS [WASHED BLACK]": 42561,
-"[DESK] NATURAL CHINO PANTS [WASHED CHARCOAL]": 51480,
-"[DESK] NATURAL CHINO PANTS [WASHED KHAKI]": 57475,
-"[DESK] NATURAL CHINO PANTS [WASHED NAVY]": 51480,
-"[DESK] OFFICE HALF SHIRT [LIGHT BLUE]": 29576,
-"[DESK] OFFICE HALF SHIRT [LIGHT GRAY]": 29576,
-"[DESK] OFFICE SHIRT [DEEP CHARCOAL]": 30962,
-"[DESK] OFFICE SHIRT [FOG]": 33393,
-"[DESK] OFFICE SHIRT [GRAPHITE]": 33393,
-"[DESK] OFFICE SHIRT [GRAY]": 33393,
-"[DESK] OFFICE SHIRT [ICE BLUE]": 30962,
-"[DESK] OFFICE SHIRT [INK NAVY]": 30962,
-"[DESK] OFFICE SHIRT [WHITE]": 33393,
-"[DESK] OFFICE STRIPE SHIRT [BLACK]": 35450,
-"[DESK] ONE TUCK CHINO SHORTS [WASHED BEIGE]": 39384,
-"[DESK] ONE TUCK CHINO SHORTS [WASHED CHARCOAL]": 39384,
-"[DESK] ONE TUCK CHINO SHORTS [WASHED KHAKI]": 39384,
-"[DESK] STRIPE SLIM TIE [GRAY]": 15992,
-"[DESK] STRIPE SLIM TIE [NAVY]": 15992,
-"[DESK] WOOL SLIM TIE [BLACK]": 19790,
-"[DESK] WOOL SLIM TIE [CHARCOAL]": 19790,
-"[JAPANESE FABRIC] CRINKLE CHECK SHIRT [BLACK]": 45945,
-"[JAPANESE FABRIC] CRINKLE CHECK SHIRT [BROWN]": 45947,
-"[JAPANESE FABRIC] CRINKLE CHECK SHIRT [IVORY]": 45945,
-"[JAPANESE FABRIC] CRINKLE CHECK SHIRT [PURPLE]": 45948,
-"[JAPANESE FABRIC] EMBOSSED SMALL CHECK SHIRT [BLUE BEIGE]": 76620,
-"[JAPANESE FABRIC] EMBOSSED SMALL CHECK SHIRT [BLUE]": 76625,
-"[JAPANESE FABRIC] EMBOSSED SMALL CHECK SHIRT [NAVY BROWN]": 76620,
-"[JAPANESE FABRIC] FLANNEL OMBRE CHECK SHIRT": 85610,
-"[JAPANESE FABRIC] OMBRE CHECK SHIRT [BEIGE BLUE]": 88791,
-"[LEISURE] FIDLOCK ROAM BELT [BLACK]": 19744,
-"[LEISURE] FIDLOCK ROAM BELT [OLIVE]": 19139,
-"[LEISURE] TWO POCKET ROAM HALF SHIRT [BLACK]": 41071,
-"[UNIONBLUE X ENTRANCE] DIFFUSER AMBIENCE 150ml [HINOKI]": 10941,
-"[V2] CASHMERE WOOL CREWNECK KNIT [BLACK]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [CHARCOAL]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [CLOUD]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [DARK NAVY]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [MELANGE BROWN]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [MELANGE GRAY]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [MELANGE LIGHT BEIGE]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [MELANGE LIGHT BLUE]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [MELANGE LIGHT PINK]": 59422,
-"[V2] CASHMERE WOOL CREWNECK KNIT [MELANGE LIGHT PURPLE]": 59422,
-"[V2] H.I.A LOGO PRINTED T-SHIRT [FADED BLACK]": 23905,
-"[V2] H.I.A LOGO PRINTED T-SHIRT [WASHED CHARCOAL]": 21705,
-"[V2] TIPSY DRINKING TEAM PRINTED T-SHIRT [DYED BLACK]": 28915,
-"[V2] TIPSY DRINKING TEAM PRINTED T-SHIRT [DYED NAVY]": 28915,
-"[V2] VINTAGE CADET BALL CAP [WASHED BLACK]": 17502,
-"[WOMAN] CASHMERE WOOL CREWNECK KNIT [DARK GRAY]": 47008,
-"[WOMAN] CASHMERE WOOL CREWNECK KNIT [DARK NAVY]": 47008,
-"[WOMAN] CASHMERE WOOL CREWNECK KNIT [MELANGE GRAY]": 47008,
-"[WOMAN] CASHMERE WOOL CREWNECK KNIT [MELANGE PURPLE]": 47008,
-"[WOMAN] CASHMERE WOOL CREWNECK KNIT [NATURAL BROWN]": 47008,
-"[WOMAN] CASHMERE WOOL ROUND CARDIGAN [DARK GRAY]": 51155,
-"[WOMAN] CASHMERE WOOL ROUND CARDIGAN [DARK NAVY]": 51155,
-"[WOMAN] CASHMERE WOOL ROUND CARDIGAN [MELANGE GRAY]": 51155,
-"[WOMAN] CASHMERE WOOL ROUND CARDIGAN [NATURAL BROWN]": 51155,
-"[WOMAN] CASHMERE WOOL V-NECK KNIT [DARK GRAY]": 47008,
-"[WOMAN] CASHMERE WOOL V-NECK KNIT [DARK NAVY]": 47008,
-"[WOMAN] CASHMERE WOOL V-NECK KNIT [NATURAL BROWN]": 47008,
-"[WOMAN] LAUNDRY SHIRT [LAVENDER GRAY]": 26445,
-"[WOMAN] LAUNDRY SHIRT [LEMON]": 26445,
-"[WOMAN] LAUNDRY SHIRT [NAVY]": 26445,
-"[WOMAN] LAUNDRY SHIRT [PURPLE GRAY]": 26445,
-"[WOMAN] LAUNDRY SHIRT [SAX BLUE]": 26445,
-"[WOMAN] LAUNDRY SHIRT [WHITE]": 26445,
-"[WOMAN] LAUNDRY SMALL CHECK SHIRT [CHARCOAL BLACK]": 36772,
-"[WOMAN] PREMIER CRU ELEVEN KNIT [CREAM]": 43565,
-"[WOMAN] PREMIER CRU ELEVEN KNIT [LAVENDER]": 43565,
-"[WOMAN] PREMIER CRU ELEVEN KNIT [LIGHT GRAY]": 43565,
-"[WOMAN] PREMIER CRU ELEVEN KNIT [NATURAL BROWN]": 43565,
-"[단종]EDITOR SHIRT (CLEAN)": 30355,
-"[단종]EDITOR SHIRT (FOG)": 30355,
-"[단종]EDITOR SHIRT (GRAY)": 30355,
-"[단종]EDITOR SHIRT (PINK)": 30355,
-"[단종]EDITOR SHIRT (SAX BLUE)": 30355,
-"[단종]EDITOR SHIRT (SKY BLUE)": 30355,
-"[단종]EDITOR SHIRT (WHITE)": 30355,
-"25mm BASIC LEATHER BELT [BRONZE/BROWN]": 16727,
-"25mm BASIC LEATHER BELT [SILVER/BLACK]": 16727,
-"25mm LEATHER ROLLER BUCKLE BELT [BLACK]": 21402,
-"25mm LEATHER ROLLER BUCKLE BELT [BROWN]": 21402,
-"25mm LEATHER WEAVING BELT [BLACK]": 28167,
-"25mm LEATHER WEAVING BELT [BROWN]": 28167,
-"5PK ARCHON SELVEDGE WIDE DENIM [BLEACHED]": 89548,
-"5PK ARCHON SELVEDGE WIDE DENIM [ONE WASH]": 104882,
-"5PK CAMPUS DENIM PANTS [BLEACHED BLUE]": 46560,
-"5PK CAMPUS DENIM PANTS [ONE WASH]": 39410,
-"5PK PIER SELVEDGE REGULAR DENIM [ONE WASH]": 89917,
-"5PK VINTAGE COTTON PANTS [DYED GRAY]": 41055,
-"5PK VINTAGE COTTON PANTS [PURPLE GRAY]": 41055,
-"5PK VINTAGE COTTON PANTS [WASHED BEIGE]": 41055,
-"5PK VINTAGE COTTON PANTS [WASHED BLACK]": 41055,
-"70/30 FIELD JACKET (BLACK)": 138135,
-"70/30 FIELD JACKET (BROWN)": 138135,
-"ALPACA BRUSHED STRIPE KNIT [GRANITE]": 54950,
-"ALPACA BRUSHED STRIPE KNIT [IVY SAND]": 54950,
-"ALPACA BRUSHED STRIPE KNIT [WOOD TAUPE]": 54950,
-"ARCHON WIDE DENIM PANTS [BRUSHED BLACK]": 47842,
-"ARCHON WIDE DENIM PANTS [LIGHT BLUE]": 48997,
-"ARCHON WIDE DENIM PANTS [MID BLUE]": 47407,
-"ARCHON WIDE DENIM PANTS [WASHED BLACK]": 46742,
-"AURORA ALPACA CROP CARDIGAN [BLACK]": 55126,
-"AURORA ALPACA CROP CARDIGAN [CHARCOAL]": 55126,
-"AURORA ALPACA CROP CARDIGAN [DARK OLIVE]": 55126,
-"AURORA ALPACA CROP CARDIGAN [MELANGE GRAY]": 55126,
-"AURORA ALPACA KNIT [CLOUD]": 49318,
-"AURORA ALPACA KNIT [COTTON CANDY]": 49318,
-"AURORA ALPACA KNIT [DARK DENIM]": 49318,
-"AURORA ALPACA KNIT [DEEP BLUE]": 49318,
-"AURORA ALPACA KNIT [HAZE]": 49318,
-"AURORA ALPACA KNIT [LILAC]": 49318,
-"AURORA ALPACA KNIT [MELANGE BLUE]": 49318,
-"AURORA ALPACA KNIT [MELANGE GRAY]": 49318,
-"AURORA ALPACA KNIT [NATURAL]": 49318,
-"AURORA ALPACA KNIT [SILVER]": 49318,
-"AURORA ALPACA KNIT [WOODCHIP]": 49318,
-"AURORA ALPACA POLO KNIT [DARK DENIM]": 53432,
-"AURORA ALPACA POLO KNIT [DARK OLIVE]": 53432,
-"AURORA ALPACA POLO KNIT [GRAY]": 53432,
-"AURORA ALPACA POLO KNIT [GREEN HEIGHTS]": 53432,
-"BACK FLAP SHELL PARKA (DOVE)": 136733,
-"BACK SATIN FATIGUE SHORTS [IVORY]": 46025,
-"BACK SATIN FATIGUE SHORTS [OLIVE]": 46025,
-"BASIC ALLDAY T-SHIRT [BLACK]": 18183,
-"BASIC ALLDAY T-SHIRT [GRAPHITE]": 18183,
-"BASIC ALLDAY T-SHIRT [WHITE]": 18183,
-"BERMUDA CARGO SHORTS [BLACK]": 77525,
-"BERMUDA CARGO SHORTS [KHAKI]": 77525,
-"BERMUDA SWEAT SHORTS [BLACK]": 24663,
-"BERMUDA SWEAT SHORTS [GRAY]": 24663,
-"BORDER STRIPE KNIT [FOG BLUE]": 71010,
-"BORDER STRIPE KNIT [STONE GRAY]": 71010,
-"BRIGHTON STRIPE SHIRT": 35910,
-"CABLE COTTON KNIT [BLACK]": 39418,
-"CABLE COTTON KNIT [KHAKI GRAY]": 39418,
-"CABLE COTTON KNIT [NAVY]": 39418,
-"CABLE COTTON KNIT [RED]": 39418,
-"CABLE MERINO WOOL KNIT [BLACK]": 43213,
-"CABLE MERINO WOOL KNIT [DARK GRAY]": 43213,
-"CABLE MERINO WOOL KNIT [NAVY]": 43213,
-"CABLE MERINO WOOL KNIT [RED]": 43213,
-"CABLE WOOL CROP CARDIGAN [CHARCOAL]": 44291,
-"CABLE WOOL CROP CARDIGAN [NAVY]": 44291,
-"CABLE WOOL CROP CARDIGAN [RED]": 44291,
-"CADET LOGO PRINTED T-SHIRT [DYED BLACK]": 28365,
-"CADET LOGO PRINTED T-SHIRT [DYED NAVY]": 28365,
-"CASHMERE WOOL CREWNECK KNIT [BURGUNDY]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [CACAO BROWN]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [COBALT]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [COFFEE BROWN]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [DARK GREEN]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [DARK WINE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [GRAYISH BLUE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [LIGHT BEIGE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [LIGHT GRAY]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MAROON]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MELANGE BEIGE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MELANGE BLUE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MELANGE GRAY]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MELANGE LIGHT GRAY]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MELANGE NAVY]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [MOCHA BROWN]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [PURE RED]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [PURPLE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [RED]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [ROSE RED]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [STEEL BLUE]": 51078,
-"CASHMERE WOOL CREWNECK KNIT [VIOLET]": 51078,
-"CASHMERE WOOL V-NECK KNIT [BLACK]": 51078,
-"CASHMERE WOOL V-NECK KNIT [DARK GRAY]": 51078,
-"CASHMERE WOOL V-NECK KNIT [DARK NAVY]": 51078,
-"CASK WOOL HEAVY SWEATER [BLACK]": 59053,
-"CASK WOOL HEAVY SWEATER [BROWN]": 59053,
-"CASK WOOL HEAVY SWEATER [DARK GRAY]": 59053,
-"CASK WOOL HEAVY SWEATER [IVORY STRIPE]": 59053,
-"CASK WOOL HEAVY SWEATER [IVORY]": 59053,
-"CASK WOOL HEAVY SWEATER [LIGHT GRAY]": 59053,
-"CASK WOOL HEAVY SWEATER [NAVY STRIPE]": 59053,
-"CASK WOOL HEAVY SWEATER [NAVY]": 59053,
-"CATAPULT LOGO PRINTED SWEATSHIRT [GRAY]": 31542,
-"CATAPULT LOGO PRINTED SWEATSHIRT [NAVY]": 31542,
-"CATAPULT LOGO PRINTED T-SHIRT [GRAY]": 24576,
-"CATAPULT LOGO PRINTED T-SHIRT [NAVY]": 23985,
-"CHAMBRAY WORK HALF SHIRT [BLACK]": 31144,
-"CHAMBRAY WORK HALF SHIRT [BLUE]": 31144,
-"COLLAR HALF ZIP SWEATSHIRT [DYED BLACK]": 45160,
-"COMFORT WOOL KNIT HOOD [CHARCOAL]": 56798,
-"COMFORT WOOL KNIT HOOD [GRAY]": 56798,
-"CONE DENIM WORK JACKET": 73887,
-"CORDUROY COMFORT PANTS [BLACK]": 49529,
-"CORDUROY COMFORT PANTS [CEMENT GRAY]": 49529,
-"CORDUROY TWO PLEATS WIDE PANTS [BROWN]": 50022,
-"CORDUROY TWO PLEATS WIDE PANTS [NAVY]": 50022,
-"CORDUROY WORK SHIRT [DOVE]": 37533,
-"CORDUROY WORK SHIRT [MOCHA]": 37533,
-"COTTON CREW JACKET [BLACK]": 107321,
-"COTTON WORK JACKET [WASHED BLACK]": 65637,
-"CRAFT HENLEY L/S T-SHIRT [GRAPHITE]": 22806,
-"CRAFT HENLEY L/S T-SHIRT [MELANGE GRAY]": 22806,
-"CRAFT HENLEY L/S T-SHIRT [OFF WHITE]": 22806,
-"CRAFT HENLEY T-SHIRT [GRAPHITE]": 19949,
-"CRAFT HENLEY T-SHIRT [MELANGE GRAY]": 19949,
-"CRAFT HENLEY T-SHIRT [OFF WHITE]": 19949,
-"DAMAGED REPLICA CARGO PANTS V2 [BLACK]": 60959,
-"DAMAGED REPLICA CARGO PANTS V2 [KHAKI]": 60959,
-"DELPHI TRUCKER JACKET [VINTAGE BLACK]": 59049,
-"DENIM BERMUDA SHORTS [BLACK]": 25711,
-"DENIM BERMUDA SHORTS [BLUE]": 25711,
-"DENIM WORK SHIRT [BLACK]": 30200,
-"DENIM WORK SHIRT [BLUE]": 32400,
-"DENIM WORK SHIRT [MID BLUE]": 33900,
-"DENSE RIB HOODIE JACKET [DARK GRAY]": 76356,
-"DENSE RIB HOODIE JACKET [KHAKI BROWN]": 76356,
-"DONEGAL CASHMERE 100 CARDIGAN [CAVIAR]": 175606,
-"DONEGAL CASHMERE 100 CARDIGAN [FOSSIL]": 175606,
-"DYED LAUNDRY SHIRT (CHARCOAL)": 33646,
-"DYED LAUNDRY SHIRT (CONCRETE)": 33646,
-"DYED LAUNDRY SHIRT (FOG)": 33646,
-"DYED LAUNDRY SHIRT (HEATHER GRAY)": 33646,
-"DYED LAUNDRY SHIRT (NAVY)": 33646,
-"DYED LAUNDRY SHIRT (OCEAN BLUE)": 33646,
-"DYED LAUNDRY SHIRT (PALE GREEN)": 33646,
-"DYED NARROW BORDER L/S T-SHIRT [BLACK]": 28956,
-"DYED NARROW BORDER L/S T-SHIRT [BLUE GRAY]": 27856,
-"DYED NARROW BORDER L/S T-SHIRT [BROWN]": 27856,
-"DYED NARROW BORDER L/S T-SHIRT [FADED NAVY]": 29515,
-"EAU DE PARFUM 50ml [HINOKI]": 10999,
-"EDITOR SHIRT [CEMENT BEIGE]": 30823,
-"EDITOR SHIRT [DEEP BROWN]": 30823,
-"EDITOR SHIRT [FOG]": 33325,
-"EDITOR SHIRT [GRAPHITE]": 33325,
-"EDITOR SHIRT [GRAY PINK]": 30823,
-"EDITOR SHIRT [GRAY]": 33325,
-"EDITOR SHIRT [ICE BLUE]": 30823,
-"EDITOR SHIRT [INK NAVY]": 31252,
-"EDITOR SHIRT [MUD]": 31252,
-"EDITOR SHIRT [OCEAN BLUE]": 33325,
-"EDITOR SHIRT [PURPLE GRAY]": 30823,
-"EDITOR SHIRT [TEAL BLUE]": 30823,
-"EDITOR SHIRT [WASHED BLACK]": 30823,
-"EDITOR SHIRT [WHITE]": 33325,
-"EDITOR STRIPE SHIRT [BLACK]": 29063,
-"EDITOR STRIPE SHIRT [BLUE/GRAY]": 33599,
-"FADED LONG SLEEVE (BLACK)": 27139,
-"FAIRFIELD FLANNEL SHIRT": 34552,
-"FLANNEL TWO PLEATS WIDE PANTS [BLACK]": 65401,
-"FLANNEL TWO PLEATS WIDE PANTS [CHARCOAL]": 65401,
-"FLIGHT BOMBER JACKET [BLACK]": 95222,
-"FLIGHT BOMBER JACKET [KHAKI]": 95222,
-"FOX WAFFLE SWEATER [BLACK]": 71494,
-"FOX WAFFLE SWEATER [DEEP GRAY]": 71494,
-"FOX WAFFLE SWEATER [GRAY]": 71494,
-"FOX WAFFLE SWEATER [IVORY]": 71494,
-"FOX WAFFLE SWEATER [LAVENDER]": 71494,
-"FOX WAFFLE SWEATER [NATURAL BROWN]": 71494,
-"FOX WAFFLE SWEATER [WINE]": 71494,
-"FRIDAY MERINO WOOL KNIT [BLACK]": 45017,
-"FRIDAY MERINO WOOL KNIT [BROWN]": 45017,
-"FRIDAY MERINO WOOL KNIT [CHARCOAL]": 45017,
-"FRIDAY MERINO WOOL KNIT [DUST PINK]": 45017,
-"FRIDAY MERINO WOOL KNIT [NAVY]": 45017,
-"FRIDAY MERINO WOOL KNIT [WASHED BLUE]": 45017,
-"FRIDAY MERINO WOOL KNIT [WASHED BROWN]": 45017,
-"GREENWICH OMBRE SHIRT": 34288,
-"H.I.A LOGO PRINTED HOODY [BLACK]": 37180,
-"H.I.A LOGO SWEATSHIRT [BLACK]": 35235,
-"H.I.A LOGO SWEATSHIRT [NAVY]": 35235,
-"HARBOR STRIPE KNIT [MARINE GRAY]": 49777,
-"HARBOR STRIPE KNIT [MONOCHROME BLACK]": 50754,
-"HARBOR STRIPE KNIT [MOONLIT NAVY]": 49777,
-"HARBOR STRIPE KNIT [MOSS BROWN]": 49126,
-"HARBOR STRIPE KNIT [PEBBLE BEIGE]": 49818,
-"HARBOR STRIPE KNIT [RUSTY CHARCOAL]": 49940,
-"HARD TWIST 2LINE STRIPE POLO KNIT [BEIGE]": 33516,
-"HARD TWIST 2LINE STRIPE POLO KNIT [BLACK]": 33516,
-"HARD TWIST CAMPER KNIT [BLACK]": 35126,
-"HARD TWIST CAMPER KNIT [DEEP BROWN]": 35126,
-"HARD TWIST CAMPER KNIT [GRAPHITE]": 35126,
-"HARD TWIST CAMPER KNIT [INK NAVY]": 35126,
-"HARD TWIST COMFORT POLO KNIT [BLACK]": 31316,
-"HARD TWIST COMFORT POLO KNIT [DEEP BLUE]": 31316,
-"HARD TWIST COMFORT POLO KNIT [DEEP BROWN]": 31316,
-"HARD TWIST COMFORT POLO KNIT [FOG]": 31316,
-"HARD TWIST COMFORT POLO KNIT [GRAPHITE]": 31316,
-"HARD TWIST COMFORT POLO KNIT [INK NAVY]": 31316,
-"HARD TWIST COMFORT POLO KNIT [IVORY]": 31316,
-"HARD TWIST COMFORT POLO KNIT [LAVENDER GRAY]": 31316,
-"HARD TWIST COMFORT POLO KNIT [MUD]": 31316,
-"HARD TWIST COMFORT POLO KNIT [OFF WHITE]": 31316,
-"HARD TWIST COMFORT POLO KNIT [PURPLE GRAY]": 31316,
-"HARD TWIST COMFORT POLO KNIT [WARM GRAY]": 31316,
-"HARD TWIST COTTON CABLE POLO KNIT [BLACK]": 33516,
-"HARD TWIST COTTON CABLE POLO KNIT [DARK NAVY]": 33516,
-"HARD TWIST COTTON CABLE POLO KNIT [GRAPHITE]": 33516,
-"HARD TWIST COTTON CABLE POLO KNIT [MUD]": 33516,
-"HARD TWIST COTTON CREWNECK KNIT [BLACK]": 31800,
-"HARD TWIST COTTON CREWNECK KNIT [BLUE GRAY]": 31800,
-"HARD TWIST COTTON CREWNECK KNIT [CHARCOAL]": 31800,
-"HARD TWIST COTTON CREWNECK KNIT [MAUVE BROWN]": 31800,
-"HARD TWIST COTTON CREWNECK KNIT [MELANGE GRAY]": 31800,
-"HARD TWIST COTTON RIBBED KNIT [BLACK]": 37482,
-"HARD TWIST COTTON RIBBED KNIT [BLUE GRAY]": 37482,
-"HARD TWIST COTTON RIBBED KNIT [CHARCOAL]": 37482,
-"HARD TWIST COTTON RIBBED KNIT [MAUVE BROWN]": 37482,
-"HARD TWIST COTTON RIBBED KNIT [MELANGE GRAY]": 37482,
-"HARD TWIST COTTON V-NECK KNIT [BLACK]": 32900,
-"HARD TWIST COTTON V-NECK KNIT [CHARCOAL]": 32900,
-"HARD TWIST COTTON V-NECK KNIT [INK NAVY]": 32900,
-"HARD TWIST COTTON V-NECK KNIT [MELANGE GRAY]": 32900,
-"HARD TWIST COTTON ZIP-UP KNIT [BLACK]": 47162,
-"HARD TWIST COTTON ZIP-UP KNIT [CHARCOAL]": 47162,
-"HARD TWIST COTTON ZIP-UP KNIT [GRAYISH KHAKI]": 47162,
-"HARD TWIST COTTON ZIP-UP KNIT [MELANGE GRAY]": 47162,
-"HARD TWIST CREWNECK HALF KNIT [LIGHT BROWN]": 30700,
-"HARD TWIST CREWNECK HALF KNIT [SAND BEIGE]": 30700,
-"HARD TWIST CREWNECK HALF KNIT [SKY BLUE]": 30700,
-"HARD TWIST CREWNECK HALF KNIT [WARM GRAY]": 30700,
-"HARD TWIST GATHERWELL STRIPE POLO KNIT [DEEP FOREST]": 33177,
-"HARD TWIST GATHERWELL STRIPE POLO KNIT [GARNET GRAY]": 33150,
-"HARD TWIST GATHERWELL STRIPE POLO KNIT [MOSS BEIGE]": 33177,
-"HARD TWIST HENLEY-NECK HALF KNIT [BLACK]": 34349,
-"HARD TWIST HENLEY-NECK HALF KNIT [GRAPHITE]": 34349,
-"HARD TWIST HENLEY-NECK HALF KNIT [INK NAVY]": 34349,
-"HARD TWIST HENLEY-NECK HALF KNIT [MELANGE GRAY]": 34349,
-"HARD TWIST HENLEY-NECK HALF KNIT [OFF WHITE]": 34349,
-"HARD TWIST HENLEY-NECK KNIT [BLACK]": 37306,
-"HARD TWIST HENLEY-NECK KNIT [MELANGE GRAY]": 37306,
-"HARD TWIST NARROW STRIPE POLO KNIT [BLACK]": 31316,
-"HARD TWIST NARROW STRIPE POLO KNIT [BROWN]": 31316,
-"HARD TWIST NARROW STRIPE POLO KNIT [GRAY]": 31316,
-"HARD TWIST SPREAD POLO HALF KNIT [BLACK]": 34257,
-"HARD TWIST SPREAD POLO HALF KNIT [GRAPHITE]": 34257,
-"HARD TWIST SPREAD POLO HALF KNIT [INK NAVY]": 34257,
-"HARD TWIST SPREAD POLO HALF KNIT [MELANGE GRAY]": 34257,
-"HARD TWIST SPREAD POLO HALF KNIT [OFF WHITE]": 34257,
-"HARD TWIST SPREAD POLO KNIT [BLACK]": 36844,
-"HARD TWIST SPREAD POLO KNIT [MELANGE GRAY]": 36844,
-"HARD TWIST TRIP POLO KNIT [BEIGE STRIPE]": 34486,
-"HARD TWIST TRIP POLO KNIT [BLACK]": 34486,
-"HARD TWIST TRIP POLO KNIT [GRAPHITE]": 34486,
-"HARD TWIST TRIP POLO KNIT [INK NAVY]": 34486,
-"HARD TWIST TRIP POLO KNIT [MUD]": 34486,
-"HAZE STRIPE SHIRT [MELANGE BLUE]": 29512,
-"HAZE STRIPE SHIRT [MELANGE PINK]": 29512,
-"HERITAGE WASHED BALL CAP [BLACK]": 19042,
-"HERITAGE WASHED BALL CAP [CHARCOAL]": 10517,
-"HERITAGE WASHED BALL CAP [GREEN]": 9692,
-"HERITAGE WASHED BALL CAP [NAVY]": 9692,
-"HERRINGBONE LINE WIDE SLACKS [BLACK]": 45757,
-"HERRINGBONE REVERSIBLE LINER JACKET [GRAPHITE/GRAY]": 66070,
-"HONEYWELL STRIPE SHIRT": 32732,
-"HUNTER HEAVY WOOL ROUND CARDIGAN [BLACK]": 71263,
-"HUNTER HEAVY WOOL ROUND CARDIGAN [CHARCOAL]": 71263,
-"HUNTER HEAVY WOOL ROUND CARDIGAN [NATURAL BROWN]": 71263,
-"HUNTER HEAVY WOOL ROUND CARDIGAN [NAVY]": 71263,
-"HUNTER HEAVY WOOL ROUND CARDIGAN [RED]": 71263,
-"ITALY LAMBSKIN A2 JACKET [BLACK]": 284267,
-"ITALY LAMBSKIN SINGLE JACKET [BLACK EDITION]": 309787,
-"ITALY LAMBSKIN SINGLE JACKET [BLACK]": 299557,
-"KENSINGTON HALF SHIRT": 27442,
-"KENSINGTON SHIRT": 30069,
-"KITTY HAWK LOGO PRINTED SWEATSHIRT [MELANGE GRAY]": 34784,
-"KITTY HAWK LOGO PRINTED T-SHIRT [MELANGE GRAY]": 22117,
-"LAUNDRY CHECK SHIRT [PINK]": 29833,
-"LAUNDRY COTTON KNIT [BLACK]": 44016,
-"LAUNDRY COTTON KNIT [CHARCOAL]": 44016,
-"LAUNDRY COTTON KNIT [DARK BROWN]": 44016,
-"LAUNDRY COTTON KNIT [IVORY]": 44016,
-"LAUNDRY COTTON KNIT [LIGHT GRAY]": 44016,
-"LAUNDRY COTTON KNIT [NAVY]": 44016,
-"LAUNDRY COTTON KNIT [SILVER GRAY]": 44016,
-"LAUNDRY COTTON KNIT [STEEL BLUE]": 44016,
-"LAUNDRY DENIM SHIRT (BLACK)": 30053,
-"LAUNDRY DENIM SHIRT (ONE WASH)": 30053,
-"LAUNDRY SHIRT (BROWN)": 28733,
-"LAUNDRY SHIRT (BROWN)": 28733,
-"LAUNDRY SHIRT (CHARCOAL)": 28733,
-"LAUNDRY SHIRT (GRAY)": 28733,
-"LAUNDRY SHIRT (ICE BLUE)": 28733,
-"LAUNDRY SHIRT (KHAKI GRAY)": 28733,
-"LAUNDRY SHIRT (LAVENDER GRAY)": 28733,
-"LAUNDRY SHIRT (LEMON)": 28733,
-"LAUNDRY SHIRT (LIGHT GREEN)": 28733,
-"LAUNDRY SHIRT (LILAC)": 28733,
-"LAUNDRY SHIRT (NAVY)": 28733,
-"LAUNDRY SHIRT (OCEAN BLUE)": 28733,
-"LAUNDRY SHIRT (PURPLE GRAY)": 28733,
-"LAUNDRY SHIRT (SAHARA)": 28733,
-"LAUNDRY SHIRT (SKY BLUE)": 28733,
-"LAUNDRY SHIRT (WHITE)": 28733,
-"LAUNDRY SHIRT [DEEP CHARCOAL]": 28733,
-"LAUNDRY SHIRT [GRAY PINK]": 28733,
-"LAUNDRY SHIRT [SAX BLUE]": 28733,
-"LAUNDRY SMALL CHECK SHIRT [BLACK]": 36103,
-"LAUNDRY SMALL CHECK SHIRT [BLUE GRAY]": 36103,
-"LAUNDRY SMALL CHECK SHIRT [CHARCOAL BLACK]": 36103,
-"LAUNDRY SMALL CHECK SHIRT [IVORY]": 36103,
-"LAUNDRY STRIPE SHIRT [BLUE]": 34376,
-"LAUNDRY STRIPE SHIRT [LIGHT GRAY]": 34376,
-"LENITAS HALF COAT [KHAKI BROWN]": 154063,
-"M65 FISHTAIL PARKA [BLACK]": 162436,
-"M65 FISHTAIL PARKA [KHAKI]": 162326,
-"M65 WIDE CARGO PANTS [BEIGE]": 71063,
-"M65 WIDE CARGO PANTS [BLACK]": 71063,
-"M65 WIDE CARGO PANTS [FADED OLIVE]": 71063,
-"M65 WIDE CARGO PANTS [KHAKI]": 71063,
-"M65 WIDE CARGO SHORTS [BEIGE]": 63474,
-"M65 WIDE CARGO SHORTS [KHAKI]": 63474,
-"M65 WIDE CARGO SHORTS [NAVY]": 63474,
-"MAYFAIR STRIPE SHIRT": 32732,
-"MIL MA-1 JACKET [BLACK]": 96106,
-"MIL MA-1 JACKET [KHAKI]": 96106,
-"MILITARY TOTE BAG [WASHED NAVY]": 34858,
-"MUTED STRIPE CREWNECK KNIT [IRISH GRAY]": 35315,
-"MUTED STRIPE CREWNECK KNIT [OBSIDIAN OLIVE]": 35315,
-"NARROW BORDER L/S T-SHIRT [WASHED NAVY]": 22981,
-"NARROW BORDER T-SHIRT [GRAY]": 17822,
-"NARROW BORDER T-SHIRT [IVORY]": 17822,
-"NARROW BORDER T-SHIRT [KHAKI]": 17822,
-"NARROW BORDER T-SHIRT [NAVY]": 17822,
-"NATIONAL PARK VISITOR CENTER T-SHIRT [LIGHT GRAY]": 23352,
-"NATIONAL PARK VISITOR CENTER T-SHIRT [MELANGE GRAY]": 23352,
-"NEVIS BALMACAN COAT [BLACK]": 183892,
-"OLDEST HOOD ZIP UP [CHARCOAL]": 57682,
-"ONE TUCK SIDE ADJUSTER CHINO PANTS [CHARCOAL]": 56053,
-"ONE TUCK SIDE ADJUSTER CHINO PANTS [SAHARA]": 56053,
-"ONE TUCK SIDE ADJUSTER CHINO PANTS [STONE]": 56053,
-"ONE TUCK WIDE CHINO PANTS [WASHED BEIGE]": 58147,
-"ONE TUCK WIDE CHINO PANTS [WASHED BLACK]": 58048,
-"ORTEGA KNIT BLOUSON [MELANGE GRAY]": 69580,
-"PIN CHECK SUNDAY SHIRT [ANTIQUE GRAPHITE]": 34422,
-"PIN CHECK SUNDAY SHIRT [FADED INDIGO]": 34422,
-"PREMIER CRU WOOL ELEVEN KNIT [BLACK]": 48856,
-"PREMIER CRU WOOL ELEVEN KNIT [CREAM]": 48856,
-"PREMIER CRU WOOL ELEVEN KNIT [DARK NAVY]": 48856,
-"PREMIER CRU WOOL ELEVEN KNIT [MELANGE GRAY]": 48856,
-"PREMIER CRU WOOL ELEVEN KNIT [NATURAL BROWN]": 48856,
-"PURE WOOL LONG MUFFLER [GRAY]": 18681,
-"PURE WOOL LONG MUFFLER [MOCHA BROWN]": 18681,
-"PURE WOOL LONG MUFFLER [RED]": 18681,
-"RACE HORSE RYE LONG SLEEVE [DYED BLACK]": 33260,
-"REPLICA MULTI CARGO PANTS [BLACK]": 83157,
-"REPLICA MULTI CARGO PANTS [KHAKI]": 83157,
-"REVERSIBLE LINER JACKET [BLACK/KHAKI]": 66070,
-"RODNEY HARRINGTON JACKET [BROWN]": 143114,
-"RODNEY HARRINGTON JACKET [NAVY]": 143114,
-"RUGBY MERINO POLO KNIT [BLACK STRIPE]": 52893,
-"RUGBY MERINO POLO KNIT [BLUE STRIPE]": 52893,
-"RUGBY MERINO POLO KNIT [BROWN STRIPE]": 52893,
-"RUGBY MERINO POLO KNIT [BROWN]": 52893,
-"RUGBY MERINO POLO KNIT [CHARCOAL STRIPE]": 52893,
-"RUGBY MERINO POLO KNIT [CHARCOAL]": 52893,
-"RUGBY MERINO POLO KNIT [NAVY]": 52893,
-"RUGBY MERINO POLO KNIT [WINE STRIPE]": 52893,
-"SEERSUCKER SUNDAY SHIRT [BLACK STRIPE]": 26634,
-"SEERSUCKER SUNDAY SHIRT [BLACK]": 22397,
-"SEERSUCKER SUNDAY SHIRT [NAVY]": 22397,
-"SEFM HALF ZIP WOOL SWEATER [BLACK]": 52288,
-"SEFM HALF ZIP WOOL SWEATER [CHARCOAL]": 52288,
-"SEFM HALF ZIP WOOL SWEATER [GRAY]": 52288,
-"SHADE LINE WIDE SLACKS [CHARCOAL]": 45823,
-"SMALL CHECK SUNDAY SHIRT [BLACK]": 30572,
-"SMALL CHECK SUNDAY SHIRT [BLUE GRAY]": 30572,
-"SMALL CHECK SUNDAY SHIRT [CHARCOAL BLACK]": 30572,
-"SMALL CHECK SUNDAY SHIRT [IVORY]": 30572,
-"SMALL LOGO PRINTED T-SHIRT [BLACK]": 22807,
-"SMALL LOGO PRINTED T-SHIRT [WHITE]": 22807,
-"SOLID CROP CARDIGAN [BLACK]": 48334,
-"SOLID CROP CARDIGAN [CHARCOAL]": 48334,
-"SOLID CROP CARDIGAN [NAVY]": 48334,
-"SOLID CROP CARDIGAN [RED]": 48334,
-"SOMERSET FULL ZIP-UP SWEATER [BLACK]": 83308,
-"SOMERSET FULL ZIP-UP SWEATER [CHARCOAL]": 83308,
-"SOMERSET FULL ZIP-UP SWEATER [DARK NAVY]": 83308,
-"SOMERSET FULL ZIP-UP SWEATER [GRAY]": 83308,
-"SOMERSET FULL ZIP-UP SWEATER [SAND BEIGE]": 83308,
-"STAMP OUT REALITY SWEATSHIRT [GRAY]": 34842,
-"STAMP OUT REALITY SWEATSHIRT [NAVY]": 34842,
-"STAMP OUT REALITY T-SHIRT [GRAY]": 23030,
-"STRIPE SUNDAY SHIRT [IVORY]": 30731,
-"STRIPE SUNDAY SHIRT [SKY BLUE]": 28828,
-"STRIPE SUNDAY SHIRT [VIOLET]": 28828,
-"STRUCTURED COLLAR KNIT [DARK GRAY]": 44610,
-"STRUCTURED COLLAR KNIT [KHAKI GRAY]": 44610,
-"STRUCTURED COLLAR KNIT [STEEL BLUE]": 44610,
-"STRUCTURED CROP CARDIGAN [BRICK]": 52475,
-"STRUCTURED CROP CARDIGAN [CHARCOAL]": 52475,
-"STRUCTURED CROP CARDIGAN [MELANGE BROWN]": 52475,
-"STRUCTURED CROP CARDIGAN [MELANGE GRAY]": 52475,
-"STRUCTURED CROP SHIFT CARDIGAN [CHARCOAL]": 55302,
-"STRUCTURED CROP SHIFT CARDIGAN [KHAKI BROWN]": 55302,
-"SUNDAY SHIRT (DEEP CHARCOAL)": 30297,
-"SUNDAY SHIRT (FOG)": 30297,
-"SUNDAY SHIRT (GRAPHITE)": 30297,
-"SUNDAY SHIRT (GRAY)": 30297,
-"SUNDAY SHIRT (INK NAVY)": 30297,
-"SUNDAY SHIRT (LAVENDER GRAY)": 25512,
-"SUNDAY SHIRT (LEMONADE)": 30297,
-"SUNDAY SHIRT (LIME GREEN)": 30297,
-"SUNDAY SHIRT (OCEAN BLUE)": 30297,
-"SUNDAY SHIRT (PINK)": 30297,
-"SUNDAY SHIRT (PURPLE GRAY)": 30297,
-"SUNDAY SHIRT (SKY BLUE)": 25512,
-"SUNDAY SHIRT (WHITE)": 25512,
-"SUPER FINE MERINO SHORT MUFFLER [CHARCOAL]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [COBALT]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [DARK GRAY]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [DARK NAVY]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [GRAYISH BLUE]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [IVORY]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [MAROON]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [MELANGE BROWN]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [MELANGE CREAM]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [NAVY]": 13181,
-"SUPER FINE MERINO SHORT MUFFLER [RED]": 13181,
-"SURF TEAM LOGO PRINTED SWEATSHIRT [VINTAGE BLUE]": 34234,
-"SURF TEAM LOGO PRINTED T-SHIRT [WHITE]": 21045,
-"THAMES STRIPE SHIRT": 32693,
-"TIPSY DRINKING TEAM BALL CAP [BLACK]": 17722,
-"TIPSY DRINKING TEAM HOODY [BLACK]": 37180,
-"TIPSY DRINKING TEAM SWEATSHIRT [BLACK]": 34234,
-"TWO POCKET COLLAR CARDIGAN [DARK NAVY]": 60824,
-"TWO POCKET COLLAR CARDIGAN [MELANGE GRAY]": 60824,
-"TWO POCKET SUNDAY SHIRT [NAVY]": 29934,
-"TWO POCKET SUNDAY SHIRT [SKY BLUE]": 29934,
-"TWO POCKET SUNDAY SHIRT [WHITE]": 29934,
-"TWO TUCK WIDE CHINO PANTS [WASHED BEIGE]": 48714,
-"TWO TUCK WIDE CHINO PANTS [WASHED BLACK]": 48714,
-"TWO TUCK WIDE SWEAT PANTS [BLACK]": 33659,
-"TWO TUCK WIDE SWEAT PANTS [CHARCOAL]": 33659,
-"TWO TUCK WIDE SWEAT PANTS [INK NAVY]": 33659,
-"TWO TUCK WIDE SWEAT PANTS [KHAKI]": 33659,
-"TWO TUCK WIDE SWEAT PANTS [LIGHT GRAY]": 33659,
-"TWO TUCK WIDE SWEAT PANTS [MELANGE GRAY]": 33197,
-"VTG BLAIR LOGO PRINTED T-SHIRT [BLACK]": 21045,
-"VTG NEWYORK LOGO PRINTED T-SHIRT [CHARCOAL]": 21595,
-"WASHED BORDER L/S T-SHIRT [CASHEW NUT]": 30559,
-"WASHED BORDER L/S T-SHIRT [HAZEL]": 29477,
-"WASHED BORDER L/S T-SHIRT [PISTACHIO]": 30559,
-"WASHED BORDER S/S T-SHIRT [CASHEW NUT]": 23239,
-"WASHED BORDER S/S T-SHIRT [PISTACHIO]": 23239,
-"WASHED FINE BORDER L/S T-SHIRT [BROWN]": 24108,
-"WASHED LONG SLEEVE (BLACK)": 24939,
-"WASHED LONG SLEEVE (CHARCOAL)": 24939,
-"WASHED LONG SLEEVE (KHAKI GRAY)": 24939,
-"WASHED LONG SLEEVE (MELANGE GRAY)": 24939,
-"WASHED LONG SLEEVE (WHITE)": 24939,
-"WE WANT BEER HOODY [KHAKI GRAY]": 37180,
-"WOOL WAFFLE V-NECK CARDIGAN [BLACK]": 72902,
-"WOOL WAFFLE V-NECK CARDIGAN [GRAY]": 72902,
+    "25SS 옥스포드 셔츠": {"cost": 18000, "price": 49000, "discount": 10},
+    "25SS 데님 팬츠": {"cost": 22000, "price": 69000, "discount": 15},
+    # 엑셀 변환기로 만든 코드를 여기에 붙여넣으세요
 }
 
 # ---------------------------------------------------------
 # 1. 버전 관리
 # ---------------------------------------------------------
-current_version = "v1.8"
+current_version = "v2.0"
 update_history = [
+    {"ver": "v2.0", "date": "24.12.17", "desc": "모드 분리: [직접 입력]과 [DB 불러오기]를 스위치로 완전 분리"},
+    {"ver": "v1.9", "date": "24.12.17", "desc": "DB 구조 확장: 제품 선택 시 원가 및 정가 3개까지 완전 자동 입력"},
     {"ver": "v1.8", "date": "24.12.17", "desc": "편의기능 추가: 엑셀 데이터를 코드 포맷으로 자동 변환해주는 도구 탑재"},
-    {"ver": "v1.7", "date": "24.12.17", "desc": "제품 데이터베이스(DB) 연동: 리스트에서 선택 시 원가 자동입력 기능 추가"},
-    {"ver": "v1.6", "date": "24.12.17", "desc": "긴급패치: 제품3 입력칸 먹통 현상 해결 (ID 충돌 수정)"},
-    {"ver": "v1.5", "date": "24.12.17", "desc": "설명 텍스트 오류(물결표시) 수정, 버전 히스토리 탭 추가"},
-    {"ver": "v1.4", "date": "24.12.17", "desc": "제품명 기준 정렬 시 할인율 오름차순 자동 정렬 적용"},
-    {"ver": "v1.3", "date": "24.12.17", "desc": "표 항목 순서 변경 및 가운데 정렬 디자인 적용"},
-    {"ver": "v1.2", "date": "24.12.17", "desc": "마진율 구간별 색상 자동 적용 (파랑~빨강)"},
-    {"ver": "v1.1", "date": "24.12.17", "desc": "제품 3개 비교 탭 및 할인율 선택 기능 추가"},
 ]
 
 st.set_page_config(page_title=f"브랜디드 수익성 계산기 {current_version}", layout="wide")
@@ -599,35 +29,38 @@ st.markdown("""
     div[data-testid="stExpander"] div[role="button"] p { font-size: 1.1rem; font-weight: bold; }
     th { text-align: center !important; }
     td { text-align: center !important; }
+    /* 라디오 버튼 가로 정렬 */
+    div.row-widget.stRadio > div { flex-direction: row; }
     </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 사이드바 (히스토리 + 엑셀 변환기)
+# 사이드바 (엑셀 변환기 v2)
 # ---------------------------------------------------------
 with st.sidebar:
-    # --- 엑셀 변환기 (새로 추가된 기능) ---
     with st.expander("🛠️ 엑셀 데이터 변환기 (Click)", expanded=False):
-        st.caption("엑셀의 [제품명] [원가] 두 열을 복사해서 아래에 붙여넣으세요.")
+        st.info("엑셀의 **[제품명 | 원가 | 정가 | 할인율]** 4개 열을 복사하세요.")
         raw_text = st.text_area("엑셀 데이터 붙여넣기", height=150)
         
         if raw_text:
             try:
-                # 엑셀 복사 데이터 처리 (탭으로 구분됨)
                 converted_lines = []
                 lines = raw_text.strip().split('\n')
                 for line in lines:
-                    parts = line.split('\t') # 엑셀은 보통 탭으로 구분
+                    parts = line.split('\t')
                     if len(parts) >= 2:
                         name = parts[0].strip()
-                        cost = parts[1].strip().replace(',', '') # 콤마 제거
-                        converted_lines.append(f'"{name}": {cost},')
+                        cost = parts[1].strip().replace(',', '')
+                        price = parts[2].strip().replace(',', '') if len(parts) > 2 else "0"
+                        dc = parts[3].strip().replace('%', '') if len(parts) > 3 else "0"
+                        
+                        converted_lines.append(f'"{name}": {{"cost": {cost}, "price": {price}, "discount": {dc}}},')
                 
                 result_code = "\n".join(converted_lines)
                 st.code(result_code, language='python')
                 st.caption("▲ 위 코드를 복사해서 MY_DATABASE 안에 붙여넣으세요.")
-            except:
-                st.error("형식이 올바르지 않습니다. 엑셀에서 두 열만 드래그해서 복사해주세요.")
+            except Exception:
+                st.error("형식 오류. 엑셀 4개 열(이름/원가/정가/할인율)인지 확인하세요.")
 
     st.markdown("---")
     st.header(f"📜 업데이트 히스토리")
@@ -643,9 +76,9 @@ with st.sidebar:
 st.title(f"📊 멀티 수익성 분석기 ({current_version})")
 st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
 
-# 할인율 선택
+# 할인율 선택 (직접 입력 모드용)
 with st.container():
-    st.write("🔻 **보고 싶은 할인율을 선택하세요**")
+    st.write("🔻 **[직접 입력] 모드일 때 비교할 할인율**")
     selected_rates = st.multiselect(
         "할인율(%)", 
         options=range(0, 95, 5), 
@@ -657,160 +90,46 @@ with st.container():
 tab1, tab2, tab3 = st.tabs(["🛍️ 제품 1", "🛍️ 제품 2", "🛍️ 제품 3"])
 products = [] 
 
-# 제품 리스트 옵션 만들기
-product_options = ["(직접 입력)"] + list(MY_DATABASE.keys())
+# --- 입력 처리 함수 ---
+def render_input_tab(tab_idx):
+    # 모드 선택 (라디오 버튼)
+    mode = st.radio(
+        f"입력 방식 선택 ({tab_idx})", 
+        ["📝 직접 입력", "📂 DB 불러오기"], 
+        key=f"mode_{tab_idx}",
+        label_visibility="collapsed" # 라벨 숨김 (깔끔하게)
+    )
 
-# --- 제품 1 ---
-with tab1:
-    sel1 = st.selectbox("📂 저장된 제품 불러오기", product_options, key="s1")
-    if sel1 != "(직접 입력)":
-        def_name_1 = sel1; def_cost_1 = MY_DATABASE[sel1]
-    else:
-        def_name_1 = ""; def_cost_1 = None
-
-    p1_name = st.text_input("제품명 (1)", value=def_name_1, placeholder="직접 입력하세요", key="t1_name")
-    p1_cost = st.number_input("원가 (1)", value=def_cost_1, step=1000, format="%d", key="t1_cost")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1: p1_p1 = st.number_input("정가 A", value=None, step=1000, format="%d", key="t1_p1")
-    with col2: p1_p2 = st.number_input("정가 B", value=None, step=1000, format="%d", key="t1_p2")
-    with col3: p1_p3 = st.number_input("정가 C", value=None, step=1000, format="%d", key="t1_p3")
-    
-    if p1_cost is not None:
-        valid_prices = [p for p in [p1_p1, p1_p2, p1_p3] if p is not None]
-        if valid_prices:
-            products.append({"name": p1_name if p1_name else "제품1", "cost": p1_cost, "prices": valid_prices})
-
-# --- 제품 2 ---
-with tab2:
-    sel2 = st.selectbox("📂 저장된 제품 불러오기", product_options, key="s2")
-    if sel2 != "(직접 입력)":
-        def_name_2 = sel2; def_cost_2 = MY_DATABASE[sel2]
-    else:
-        def_name_2 = ""; def_cost_2 = None
-
-    p2_name = st.text_input("제품명 (2)", value=def_name_2, placeholder="직접 입력하세요", key="t2_name")
-    p2_cost = st.number_input("원가 (2)", value=def_cost_2, step=1000, format="%d", key="t2_cost")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1: p2_p1 = st.number_input("정가 A", value=None, step=1000, format="%d", key="t2_p1")
-    with col2: p2_p2 = st.number_input("정가 B", value=None, step=1000, format="%d", key="t2_p2")
-    with col3: p2_p3 = st.number_input("정가 C", value=None, step=1000, format="%d", key="t2_p3")
-
-    if p2_cost is not None:
-        valid_prices = [p for p in [p2_p1, p2_p2, p2_p3] if p is not None]
-        if valid_prices:
-            products.append({"name": p2_name if p2_name else "제품2", "cost": p2_cost, "prices": valid_prices})
-
-# --- 제품 3 ---
-with tab3:
-    sel3 = st.selectbox("📂 저장된 제품 불러오기", product_options, key="s3")
-    if sel3 != "(직접 입력)":
-        def_name_3 = sel3; def_cost_3 = MY_DATABASE[sel3]
-    else:
-        def_name_3 = ""; def_cost_3 = None
-
-    p3_name = st.text_input("제품명 (3)", value=def_name_3, placeholder="직접 입력하세요", key="t3_name")
-    p3_cost = st.number_input("원가 (3)", value=def_cost_3, step=1000, format="%d", key="t3_cost")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1: p3_p1 = st.number_input("정가 A", value=None, step=1000, format="%d", key="t3_p1")
-    with col2: p3_p2 = st.number_input("정가 B", value=None, step=1000, format="%d", key="t3_p2")
-    with col3: p3_p3 = st.number_input("정가 C", value=None, step=1000, format="%d", key="t3_p3")
-
-    if p3_cost is not None:
-        valid_prices = [p for p in [p3_p1, p3_p2, p3_p3] if p is not None]
-        if valid_prices:
-            products.append({"name": p3_name if p3_name else "제품3", "cost": p3_cost, "prices": valid_prices})
-
-
-# ---------------------------------------------------------
-# 계산 및 출력
-# ---------------------------------------------------------
-def calculate_all(product_list, rates):
-    base_fee = 0.28
-    results = []
-    rates.sort()
-
-    for item in product_list:
-        p_name = item['name']
-        cost_price = item['cost']
-        
-        for price in item['prices']:
-            for dc_percent in rates:
-                discount_rate = dc_percent / 100.0
-                
-                if discount_rate <= 0.09:       
-                    applied_fee_rate = base_fee; fee_note = "28%"
-                elif discount_rate <= 0.19:     
-                    applied_fee_rate = base_fee - 0.01; fee_note = "27%"
-                elif discount_rate <= 0.29:     
-                    applied_fee_rate = base_fee - 0.02; fee_note = "26%"
-                else:                           
-                    applied_fee_rate = base_fee - 0.03; fee_note = "25%"
-
-                sell_price = price * (1 - discount_rate)
-                fee = sell_price * applied_fee_rate
-                profit = sell_price - cost_price - fee
-                
-                margin_rate = (profit / sell_price) * 100 if sell_price > 0 else 0
-                roi = (profit / cost_price) * 100 if cost_price > 0 else 0
-                
-                results.append({
-                    "제품명": p_name,
-                    "수수료": fee_note,
-                    "할인": dc_percent,     
-                    "정가": int(price),
-                    "판매가": int(sell_price),
-                    "원가": cost_price,
-                    "이익": int(profit),
-                    "ROI": roi,
-                    "마진": margin_rate
-                })
-    
-    df = pd.DataFrame(results)
-    
-    if not df.empty:
-        df = df.sort_values(by=['제품명', '할인'], ascending=[True, True])
-        cols = ["제품명", "수수료", "할인", "정가", "판매가", "원가", "이익", "ROI", "마진"]
-        df = df[cols]
-        
-    return df
-
-def color_margin_rows(val):
-    color = ''
-    weight = 'bold'
-    if val > 35: color = '#1E90FF' 
-    elif 31 <= val <= 35: color = '#228B22' 
-    elif 25 <= val < 31: color = '#808080' 
-    elif 20 <= val < 25: color = '#FF8C00' 
-    else: color = '#FF4500' 
-    return f'color: {color}; font-weight: {weight}'
-
-if st.button("분석 결과 보기 (터치)"):
-    if not products:
-        st.error("⚠️ 최소한 하나의 제품 정보(원가, 정가)를 입력해주세요!")
-    elif not selected_rates:
-        st.info("👈 **상단에서 '할인율'을 먼저 선택해주세요!**")
-    else:
-        df = calculate_all(products, selected_rates)
-        st.success(f"✅ 총 {len(products)}개 제품 분석 완료")
-        
-        styled_df = df.style.map(color_margin_rows, subset=['마진'])\
-            .format({
-                '원가': '{:,}',
-                '정가': '{:,}',
-                '할인': '{}%', 
-                '판매가': '{:,}',
-                '이익': '{:,}',
-                '마진': '{:.1f}%',
-                'ROI': '{:.0f}%'
-            })\
-            .set_properties(**{'text-align': 'center'}) \
-            .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+    # 1. DB 불러오기 모드
+    if mode == "📂 DB 불러오기":
+        options = list(MY_DATABASE.keys())
+        if not options:
+            st.warning("데이터베이스가 비어있습니다. 코드에 제품을 추가해주세요.")
+            return None
             
-        st.dataframe(
-            styled_df,
-            use_container_width=True,
-            hide_index=True
-        )
+        selection = st.selectbox("저장된 제품 선택", options, key=f"sel_{tab_idx}")
+        data = MY_DATABASE[selection]
+        
+        # 정보 보여주기 (읽기 전용)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("원가", f"{data['cost']:,}원")
+        c2.metric("정가", f"{data['price']:,}원")
+        c3.metric("저장된 할인율", f"{data['discount']}%")
+        
+        # 결과 리스트에 추가할 형태로 리턴
+        return {
+            "type": "db",
+            "name": selection,
+            "cost": data['cost'],
+            "prices": [data['price']], # 리스트 형태 유지
+            "fixed_discount": data['discount'] # 고정 할인율
+        }
+
+    # 2. 직접 입력 모드
+    else:
+        p_name = st.text_input(f"제품명 ({tab_idx})", placeholder="예: 옥스포드 셔츠", key=f"name_{tab_idx}")
+        p_cost = st.number_input(f"원가 ({tab_idx})", value=None, step=1000, format="%d", key=f"cost_{tab_idx}")
+        
+        c1, c2, c3 = st.columns(3)
+        with c1: p1 = st.number_input("정가 A", value=None, step=1000, format="%d", key=f"p1_{tab_idx}")
+        with c2: p2 = st.number_input("정가 B
