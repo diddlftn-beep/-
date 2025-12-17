@@ -5,7 +5,7 @@ import os
 # ---------------------------------------------------------
 # 1. 버전 관리 & 설정
 # ---------------------------------------------------------
-current_version = "v3.0 (Data File)"
+current_version = "v3.1 (Bug Fix)"
 st.set_page_config(page_title=f"수익성 계산기 {current_version}", layout="wide")
 
 st.markdown("""
@@ -127,7 +127,7 @@ with tab3:
     if r3: products_to_calc.append(r3)
 
 # ---------------------------------------------------------
-# 4. 계산 로직
+# 4. 계산 로직 (수정됨)
 # ---------------------------------------------------------
 def calculate_all(product_list, manual_rates):
     base_fee = 0.28
@@ -152,7 +152,8 @@ def calculate_all(product_list, manual_rates):
 
                 sell_price = price * (1 - discount_rate)
                 fee = sell_price * applied_fee_rate
-                profit = sell_price - cost_price - fee # cost_price 참조 수정
+                
+                # --- [수정 완료] 이전 코드의 잔재(cost_price) 제거됨 ---
                 profit = sell_price - item['cost'] - fee
 
                 margin_rate = (profit / sell_price) * 100 if sell_price > 0 else 0
