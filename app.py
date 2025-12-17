@@ -3,9 +3,9 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
-# 1. 기본 설정
+# 1. 기본 설정 (무조건 맨 위)
 # ---------------------------------------------------------
-current_version = "v7.0 (Debug Fix)"
+current_version = "v7.0 (Emergency Fix)"
 st.set_page_config(
     page_title=f"수익성 분석기 {current_version}", 
     layout="wide",
@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. 🔒 보안 구역 (로그인)
+# 2. 🔒 보안 구역
 # ---------------------------------------------------------
 def check_password():
     if "password_correct" not in st.session_state:
@@ -96,14 +96,17 @@ def load_data_debug():
     }
     df.rename(columns=rename_map, inplace=True)
 
-    # 5. 필수 컬럼 검사
-    required = ['name', 'cost', 'price', 'discount']
-    missing = [col for col in required if col not in df.columns]
-    
-    if missing:
-        st.error(f"❌ 데이터 형식 오류! 다음 항목을 찾을 수 없습니다: {missing}")
-        st.info(f"현재 인식된 항목: {list(df.columns)}")
-        st.stop() # 여기서 멈춤
+    # 5. 필수 컬럼 검사 (없으면 위치로 강제 할당)
+    if 'name' not in df.columns:
+        # 이름이 없으면 0,1,2,3번째 칸을 강제로 지정
+        if len(df.columns) >= 4:
+            df.columns.values[0] = 'name'
+            df.columns.values[1] = 'cost'
+            df.columns.values[2] = 'price'
+            df.columns.values[3] = 'discount'
+        else:
+            st.error(f"❌ 데이터 형식이 맞지 않습니다. (컬럼 부족). 현재 컬럼: {list(df.columns)}")
+            st.stop()
 
     # 6. 숫자 변환
     try:
