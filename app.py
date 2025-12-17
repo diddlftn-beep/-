@@ -3,90 +3,83 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
-# 1. 기본 설정 (무조건 맨 위)
+# 1. 기본 설정 (가장 먼저 실행)
 # ---------------------------------------------------------
-current_version = "v6.0 (UI Force)"
+current_version = "v6.1 (Security Wrapper)"
 st.set_page_config(
     page_title=f"수익성 분석기 {current_version}", 
     layout="wide",
-    initial_sidebar_state="expanded" # 사이드바 강제 펼침
+    initial_sidebar_state="expanded"
 )
 
 # ---------------------------------------------------------
-# 2. 🔒 보안 구역 (로그인 체크)
+# 2. 🔒 로그인 체크 함수
 # ---------------------------------------------------------
 def check_password():
-    """비밀번호가 맞으면 True, 아니면 False 후 중단"""
+    """비밀번호가 맞으면 True, 아니면 False 반환"""
+    
+    # 세션에 로그인 정보가 없으면 False로 초기화
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
 
+    # 이미 로그인 성공한 상태면 통과
     if st.session_state.password_correct:
         return True
 
-    # 로그인 창 UI
+    # --- 로그인 화면 (메인 화면 대신 이게 먼저 뜸) ---
     st.markdown("## 🔒 관계자 외 접근 금지")
-    st.info("보안을 위해 비밀번호를 입력해주세요.")
+    st.info("원가 데이터 보호를 위해 비밀번호 입력이 필요합니다.")
     
-    password_input = st.text_input("비밀번호", type="password", key="password_input")
+    password_input = st.text_input("비밀번호를 입력하세요", type="password", key="password_input")
 
     if password_input:
+        # Streamlit Secrets와 비교
         if password_input == st.secrets["password"]:
             st.session_state.password_correct = True
-            st.rerun()
+            st.rerun()  # 화면 새로고침 -> 메인 앱 실행
         else:
             st.error("❌ 비밀번호가 틀렸습니다.")
 
     return False
 
-# 비밀번호 틀리면 여기서 코드 올 스톱 (아래 내용 실행 안 됨)
+# ---------------------------------------------------------
+# 3. 🚩 실행 제어 (가장 중요!)
+# ---------------------------------------------------------
+# 비밀번호 확인이 안 되면 여기서 코드 실행을 '완전히' 멈춥니다.
 if not check_password():
-    st.stop()
+    st.stop()  
 
 # =========================================================
-# 🚩 (중요) 로그인 성공 직후, 가장 먼저 UI부터 그립니다
+# 🔐 (여기서부터는 로그인이 성공해야만 읽히는 코드입니다)
 # =========================================================
 
-# 1. 사이드바 강제 생성
+# 로그아웃 함수
+def logout():
+    st.session_state.password_correct = False
+    st.rerun()
+
+# --- 1. 사이드바 UI ---
 with st.sidebar:
     st.title("⚙️ 관리자 메뉴")
-    st.success("✅ 로그인됨")
+    st.success("✅ 인증 완료")
     st.write(f"버전: {current_version}")
-    
     st.markdown("---")
-    # 사이드바 로그아웃 버튼
     if st.button("🔒 로그아웃 (사이드바)", use_container_width=True):
-        st.session_state.password_correct = False
-        st.rerun()
+        logout()
 
-# 2. 메인 화면 상단 (제목 + 우측 상단 로그아웃 버튼)
+# --- 2. 메인 상단 UI ---
 col_title, col_logout = st.columns([8, 2])
-
 with col_title:
     st.title("📊 멀티 수익성 분석기")
     st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
-
 with col_logout:
-    st.write("") # 줄바꿈으로 높이 맞추기
-    # 메인 화면 로그아웃 버튼
+    st.write("") 
     if st.button("🔒 로그아웃", key='top_logout', use_container_width=True):
-        st.session_state.password_correct = False
-        st.rerun()
+        logout()
 
-st.divider() # 구분선
+st.divider()
 
-# =========================================================
-# 📂 데이터 로딩 및 계산 로직 (UI 구성 후 실행)
-# =========================================================
-
-# 스타일 정의
-st.markdown("""
-    <style>
-    .stButton>button { border-radius: 8px; font-weight: bold; }
-    th { text-align: center !important; }
-    td { text-align: center !important; }
-    </style>
-""", unsafe_allow_html=True)
-
+# --- 3. 데이터 로딩 함수 (로그인 후에만 정의됨) ---
 @st.cache_data
 def load_data():
     file_path = "products.csv"
@@ -109,14 +102,24 @@ def load_data():
     except:
         return pd.DataFrame()
 
+# [중요] 데이터를 여기서 불러옵니다. (로그인 통과 후)
 df_products = load_data()
 
-# 할인율 선택 (전역)
+# --- 4. 스타일 정의 ---
+st.markdown("""
+    <style>
+    .stButton>button { border-radius: 8px; font-weight: bold; }
+    th { text-align: center !important; }
+    td { text-align: center !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 5. 할인율 선택 ---
 st.write("🔻 **비교할 추가 할인율 선택**")
 selected_rates = st.multiselect("할인율(%)", options=range(0, 95, 5), default=[])
 st.write("")
 
-# 탭 구성 함수
+# --- 6. 입력 탭 로직 ---
 def render_input_tab(tab_idx):
     mode = st.radio(f"입력 방식 ({tab_idx})", ["📝 직접 입력", "📂 DB 불러오기"], key=f"mode_{tab_idx}", label_visibility="collapsed")
 
@@ -125,7 +128,14 @@ def render_input_tab(tab_idx):
             st.warning("데이터 파일 없음")
             return None
         
-        sel = st.multiselect("제품 검색 (X 버튼으로 삭제)", df_products['name'].tolist(), max_selections=1, key=f"search_{tab_idx}", placeholder="제품명을 검색하세요")
+        # X 버튼으로 삭제 가능한 검색창 (Multiselect 응용)
+        sel = st.multiselect(
+            "제품 검색 (X 버튼으로 삭제)", 
+            df_products['name'].tolist(), 
+            max_selections=1, 
+            key=f"search_{tab_idx}", 
+            placeholder="제품명을 검색하세요"
+        )
         
         if sel:
             name = sel[0]
@@ -160,7 +170,7 @@ with t3:
 
 st.markdown("---")
 
-# 실행 버튼
+# --- 7. 계산 및 결과 출력 ---
 if st.button("🚀 수익성 분석 실행", type="primary", use_container_width=True):
     if not items:
         st.warning("제품을 선택해주세요.")
