@@ -4,23 +4,24 @@ import pandas as pd
 # 페이지 설정
 st.set_page_config(page_title="브랜디드 수익성 계산기", layout="wide")
 
-# 스타일 조정
+# 스타일 조정 (버튼 및 폰트)
 st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; background-color: #FF4B4B; color: white; }
     div[data-testid="stExpander"] div[role="button"] p { font-size: 1.1rem; font-weight: bold; }
+    /* 표 헤더(제목) 가운데 정렬 */
+    th { text-align: center !important; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("📊 멀티 수익성 분석기")
-st.caption("마진율에 따라 색상이 자동 변경됩니다. (파랑 > 초록 > 회색 > 주황 > 빨강)")
+st.caption("마진율 색상: 🔵35%초과 🟢31~35% ⚪25~31% 🟠20~25% 🔴20%미만")
 
 # ---------------------------------------------------------
-# 1. 할인율 선택 기능 (기본값 없음)
+# 1. 할인율 선택 기능
 # ---------------------------------------------------------
 with st.container():
     st.write("🔻 **보고 싶은 할인율을 선택하세요**")
-    # default=[] 로 설정하여 초기 선택값을 모두 비웠습니다.
     selected_rates = st.multiselect(
         "할인율(%)", 
         options=range(0, 95, 5), 
@@ -29,7 +30,7 @@ with st.container():
     st.markdown("---")
 
 # ---------------------------------------------------------
-# 2. 제품 정보 입력
+# 2. 제품 정보 입력 (탭 구분)
 # ---------------------------------------------------------
 tab1, tab2, tab3 = st.tabs(["🛍️ 제품 1", "🛍️ 제품 2", "🛍️ 제품 3"])
 
@@ -107,27 +108,34 @@ def calculate_all(product_list, rates):
                 margin_rate = (profit / sell_price) * 100 if sell_price > 0 else 0
                 roi = (profit / cost_price) * 100 if cost_price > 0 else 0
                 
+                # 순서 변경: 제품명, 수수료, 할인, 정가, 판매가, 원가, 이익, ROI, 마진
                 results.append({
                     "제품명": p_name,
-                    "원가": cost_price,
-                    "정가": int(price),
-                    "할인": dc_percent,
                     "수수료": fee_note,
+                    "할인": dc_percent,
+                    "정가": int(price),
                     "판매가": int(sell_price),
+                    "원가": cost_price,
                     "이익": int(profit),
-                    "마진": margin_rate,
-                    "ROI": roi
+                    "ROI": roi,
+                    "마진": margin_rate
                 })
-    return pd.DataFrame(results)
+    
+    # 데이터프레임 생성 시 컬럼 순서 강제 지정
+    df = pd.DataFrame(results)
+    if not df.empty:
+        cols = ["제품명", "수수료", "할인", "정가", "판매가", "원가", "이익", "ROI", "마진"]
+        df = df[cols]
+    return df
 
 def color_margin_rows(val):
     color = ''
     weight = 'bold'
-    if val > 35: color = '#1E90FF' # 파랑
-    elif 31 <= val <= 35: color = '#228B22' # 초록
-    elif 25 <= val < 31: color = '#808080' # 회색
-    elif 20 <= val < 25: color = '#FF8C00' # 주황
-    else: color = '#FF4500' # 빨강
+    if val > 35: color = '#1E90FF' 
+    elif 31 <= val <= 35: color = '#228B22' 
+    elif 25 <= val < 31: color = '#808080' 
+    elif 20 <= val < 25: color = '#FF8C00' 
+    else: color = '#FF4500' 
     return f'color: {color}; font-weight: {weight}'
 
 # ---------------------------------------------------------
@@ -137,12 +145,12 @@ if st.button("분석 결과 보기 (터치)"):
     if not products:
         st.error("⚠️ 최소한 하나의 제품 정보(원가, 정가)를 입력해주세요!")
     elif not selected_rates:
-        # 할인율 선택이 안 되어 있으면 안내 메시지 출력
-        st.info("👈 **상단에서 '할인율'을 먼저 선택해주세요!** (예: 20, 25, 30)")
+        st.info("👈 **상단에서 '할인율'을 먼저 선택해주세요!**")
     else:
         df = calculate_all(products, selected_rates)
         st.success(f"✅ 총 {len(products)}개 제품 분석 완료")
         
+        # 스타일 적용 (색상 + 포맷 + 가운데 정렬)
         styled_df = df.style.map(color_margin_rows, subset=['마진'])\
             .format({
                 '원가': '{:,}',
@@ -152,11 +160,12 @@ if st.button("분석 결과 보기 (터치)"):
                 '이익': '{:,}',
                 '마진': '{:.1f}%',
                 'ROI': '{:.0f}%'
-            })
+            })\
+            .set_properties(**{'text-align': 'center'}) \
+            .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
             
         st.dataframe(
             styled_df,
             use_container_width=True,
             hide_index=True
         )
-        st.caption("※ 마진율 색상: 🔵35%초과 🟢31~35% ⚪25~31% 🟠20~25% 🔴20%미만")
