@@ -12,7 +12,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 수익성 분석기 (v1.0)")
+st.title("📊 정가 비교 (v1.0)")
 st.caption("헤더를 누르면 이제 숫자가 올바르게 정렬됩니다.")
 
 # 입력 폼
