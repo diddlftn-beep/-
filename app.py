@@ -3,24 +3,27 @@ import pandas as pd
 import os
 
 # ---------------------------------------------------------
-# 1. 기본 설정 (가장 윗줄 유지)
+# 1. 기본 설정 (사이드바 강제 확장 설정 추가)
 # ---------------------------------------------------------
-current_version = "v5.2 (Security Check)"
-st.set_page_config(page_title=f"수익성 분석기 {current_version}", layout="wide")
+current_version = "v5.3 (Sidebar Fixed)"
+st.set_page_config(
+    page_title=f"수익성 분석기 {current_version}", 
+    layout="wide",
+    initial_sidebar_state="expanded"  # 👈 [중요] 사이드바를 항상 펼쳐둠
+)
 
 # ---------------------------------------------------------
-# 2. 🔒 보안 구역 (비밀번호 체크)
+# 2. 🔒 보안 구역
 # ---------------------------------------------------------
 def check_password():
-    """비밀번호 확인 및 로그인 처리 함수"""
+    """비밀번호 확인 및 로그인 처리"""
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
 
-    # 로그인 성공 상태라면 True 반환
     if st.session_state.password_correct:
         return True
 
-    # --- 로그인 화면 (비밀번호 입력창) ---
+    # --- 로그인 화면 ---
     st.markdown("## 🔒 관계자 외 접근 금지")
     st.info("보안을 위해 비밀번호를 입력해주세요.")
     
@@ -29,35 +32,52 @@ def check_password():
     if password_input:
         if password_input == st.secrets["password"]:
             st.session_state.password_correct = True
-            st.rerun()  # 화면 새로고침하여 메인으로 진입
+            st.rerun()
         else:
             st.error("❌ 비밀번호가 틀렸습니다.")
 
     return False
 
-# [핵심] 여기서 False면 프로그램 강제 종료 (메인 화면 로딩 안 됨)
 if not check_password():
     st.stop()
 
-# ---------------------------------------------------------
-# 3. 로그아웃 기능 (사이드바)
-# ---------------------------------------------------------
-with st.sidebar:
-    st.write(f"🔐 **로그인됨**")
-    if st.button("로그아웃"):
-        st.session_state.password_correct = False
-        st.rerun()  # 다시 비밀번호 입력창으로 보냄
+# =========================================================
+# 🔓 로그인 성공 후 실행되는 영역
+# =========================================================
 
-# =========================================================
-#  🔓 여기서부터 진짜 메인 프로그램 시작
-# =========================================================
+# ---------------------------------------------------------
+# 3. 로그아웃 버튼 (사이드바 + 메인 상단 동시 배치)
+# ---------------------------------------------------------
+def logout():
+    st.session_state.password_correct = False
+    st.rerun()
+
+# [1] 사이드바에 로그아웃 버튼 배치
+with st.sidebar:
+    st.title("⚙️ 설정")
+    st.write(f"현재 버전: {current_version}")
+    st.write("---")
+    if st.button("🔒 로그아웃 (사이드바)", key='logout_sidebar'):
+        logout()
+
+# [2] 메인 화면 우측 상단에도 로그아웃 버튼 배치 (혹시 사이드바 안 보일까봐)
+col_main_title, col_logout = st.columns([8, 2])
+with col_main_title:
+    st.title(f"📊 멀티 수익성 분석기")
+with col_logout:
+    st.write("") # 줄바꿈용
+    st.write("") 
+    if st.button("🔒 로그아웃", key='logout_main'):
+        logout()
+
+st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
 
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; background-color: #FF4B4B; color: white; }
+    /* 버튼 스타일 통일 */
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
     th { text-align: center !important; }
     td { text-align: center !important; }
-    div.row-widget.stRadio > div { flex-direction: row; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -67,196 +87,109 @@ st.markdown("""
 @st.cache_data
 def load_data():
     file_path = "products.csv"
-    
     if not os.path.exists(file_path):
         return pd.DataFrame(columns=["name", "cost", "price", "discount"])
     
     try:
         df = pd.read_csv(file_path)
         df.columns = df.columns.str.strip().str.lower()
-        
-        rename_map = {
-            '상품명': 'name', '원가': 'cost', '판매가': 'price', '정가': 'price', '할인율': 'discount'
-        }
+        rename_map = {'상품명': 'name', '원가': 'cost', '판매가': 'price', '정가': 'price', '할인율': 'discount'}
         df = df.rename(columns=rename_map)
         
-        required_cols = ['name', 'cost', 'price', 'discount']
-        for col in required_cols:
-            if col not in df.columns:
-                st.error(f"❌ 데이터 파일 오류: '{col}' 항목이 없습니다.")
-                return pd.DataFrame()
+        required = ['name', 'cost', 'price', 'discount']
+        for c in required:
+            if c not in df.columns: return pd.DataFrame()
 
-        for col in ['cost', 'price', 'discount']:
-            df[col] = df[col].astype(str).str.replace(',', '').astype(float).fillna(0).astype(int)
-            
+        for c in ['cost', 'price', 'discount']:
+            df[c] = df[c].astype(str).str.replace(',', '').astype(float).fillna(0).astype(int)
         return df
-    except Exception as e:
-        st.error(f"❌ 데이터 로딩 중 오류: {e}")
+    except:
         return pd.DataFrame()
 
 df_products = load_data()
 
 # ---------------------------------------------------------
-# 5. 메인 화면 구성
+# 5. 입력 및 계산 UI
 # ---------------------------------------------------------
-st.title(f"📊 멀티 수익성 분석기 ({current_version})")
-st.caption("마진율 색상: 🔵35%초과 🟢31-35% ⚪25-31% 🟠20-25% 🔴20%미만")
-
 with st.container():
     st.write("🔻 **추가로 비교할 할인율을 선택하세요**")
     selected_rates = st.multiselect("할인율(%)", options=range(0, 95, 5), default=[])
     st.markdown("---")
 
-# ---------------------------------------------------------
-# 6. 입력 탭 설정
-# ---------------------------------------------------------
 def render_input_tab(tab_idx):
-    mode = st.radio(
-        f"입력 방식 ({tab_idx})", 
-        ["📝 직접 입력", "📂 DB 불러오기"], 
-        key=f"mode_{tab_idx}",
-        label_visibility="collapsed"
-    )
+    mode = st.radio(f"입력 방식 ({tab_idx})", ["📝 직접 입력", "📂 DB 불러오기"], key=f"mode_{tab_idx}", label_visibility="collapsed")
 
     if mode == "📂 DB 불러오기":
         if df_products.empty:
-            st.warning("데이터 파일이 없습니다.")
+            st.warning("데이터 파일 없음")
             return None
-            
-        product_selection = st.multiselect(
-            "제품 검색 (X 눌러서 삭제)",
-            options=df_products['name'].tolist(),
-            max_selections=1,
-            placeholder="제품명을 입력하세요",
-            key=f"search_{tab_idx}"
-        )
         
-        if product_selection:
-            name = product_selection[0]
+        # X 버튼으로 삭제 가능한 검색창
+        sel = st.multiselect("제품 검색 (X 눌러서 삭제)", df_products['name'].tolist(), max_selections=1, key=f"search_{tab_idx}")
+        
+        if sel:
+            name = sel[0]
             row = df_products[df_products['name'] == name].iloc[0]
-            
             c1, c2, c3 = st.columns(3)
-            c1.metric("원가", f"{row['cost']:,}원")
-            c2.metric("정가", f"{row['price']:,}원")
-            c3.metric("DB 할인율", f"{row['discount']}%")
-            
-            return {
-                "type": "db",
-                "name": name,
-                "cost": row['cost'],
-                "prices": [row['price']],
-                "fixed_discount": row['discount']
-            }
-        else:
-            st.info("👆 제품을 검색해주세요.")
-            return None
-
+            c1.metric("원가", f"{row['cost']:,}")
+            c2.metric("정가", f"{row['price']:,}")
+            c3.metric("DB 할인", f"{row['discount']}%")
+            return {"type": "db", "name": name, "cost": row['cost'], "prices": [row['price']], "fixed_discount": row['discount']}
+        return None
     else:
-        p_name = st.text_input(f"제품명", placeholder="예: 신상품 A", key=f"name_{tab_idx}")
-        p_cost = st.number_input(f"원가", value=None, step=1000, key=f"cost_{tab_idx}")
-        
+        name = st.text_input("제품명", key=f"n_{tab_idx}")
+        cost = st.number_input("원가", step=1000, key=f"c_{tab_idx}")
         c1, c2, c3 = st.columns(3)
-        with c1: p1 = st.number_input("정가 A", value=None, step=1000, key=f"p1_{tab_idx}")
-        with c2: p2 = st.number_input("정가 B", value=None, step=1000, key=f"p2_{tab_idx}")
-        with c3: p3 = st.number_input("정가 C", value=None, step=1000, key=f"p3_{tab_idx}")
-        
-        if p_cost is not None:
-            valid_prices = [p for p in [p1, p2, p3] if p is not None]
-            if valid_prices:
-                return {
-                    "type": "manual",
-                    "name": p_name if p_name else f"제품{tab_idx}",
-                    "cost": p_cost,
-                    "prices": valid_prices,
-                    "fixed_discount": None
-                }
+        p1 = c1.number_input("정가 A", step=1000, key=f"p1_{tab_idx}")
+        p2 = c2.number_input("정가 B", step=1000, key=f"p2_{tab_idx}")
+        p3 = c3.number_input("정가 C", step=1000, key=f"p3_{tab_idx}")
+        if cost:
+            prices = [p for p in [p1, p2, p3] if p]
+            if prices: return {"type": "manual", "name": name or f"제품{tab_idx}", "cost": cost, "prices": prices, "fixed_discount": None}
     return None
 
-tab1, tab2, tab3 = st.tabs(["🛍️ 제품 1", "🛍️ 제품 2", "🛍️ 제품 3"])
-products_to_calc = []
-
-with tab1:
-    r1 = render_input_tab(1)
-    if r1: products_to_calc.append(r1)
-with tab2:
-    r2 = render_input_tab(2)
-    if r2: products_to_calc.append(r2)
-with tab3:
-    r3 = render_input_tab(3)
-    if r3: products_to_calc.append(r3)
+t1, t2, t3 = st.tabs(["🛍️ 제품 1", "🛍️ 제품 2", "🛍️ 제품 3"])
+items = []
+with t1: 
+    if (r:=render_input_tab(1)): items.append(r)
+with t2: 
+    if (r:=render_input_tab(2)): items.append(r)
+with t3: 
+    if (r:=render_input_tab(3)): items.append(r)
 
 # ---------------------------------------------------------
-# 7. 계산 로직
+# 6. 계산 실행
 # ---------------------------------------------------------
-def calculate_results(product_list, compare_rates):
-    base_fee = 0.28
-    results = []
-    compare_rates.sort()
-
-    for item in product_list:
-        if item['type'] == 'db':
-            rates_set = {item['fixed_discount']}
-            if compare_rates: rates_set.update(compare_rates)
-            target_rates = sorted(list(rates_set))
-        else:
-            target_rates = compare_rates if compare_rates else [0]
-
-        for price in item['prices']:
-            if price == 0: continue
-            for dc_percent in target_rates:
-                discount_rate = dc_percent / 100.0
-                
-                if discount_rate <= 0.09: applied_fee_rate = base_fee; fee_note = "28%"
-                elif discount_rate <= 0.19: applied_fee_rate = base_fee - 0.01; fee_note = "27%"
-                elif discount_rate <= 0.29: applied_fee_rate = base_fee - 0.02; fee_note = "26%"
-                else: applied_fee_rate = base_fee - 0.03; fee_note = "25%"
-
-                sell_price = price * (1 - discount_rate)
-                fee = sell_price * applied_fee_rate
-                profit = sell_price - item['cost'] - fee
-
-                margin_rate = (profit / sell_price) * 100 if sell_price > 0 else 0
-                roi = (profit / item['cost']) * 100 if item['cost'] > 0 else 0
-                
-                results.append({
-                    "제품명": item['name'],
-                    "수수료": fee_note,
-                    "할인": dc_percent,      
-                    "정가": int(price),
-                    "판매가": int(sell_price),
-                    "원가": int(item['cost']),
-                    "이익": int(profit),
-                    "ROI": roi,
-                    "마진": margin_rate
-                })
-    
-    if not results: return pd.DataFrame()
-    df = pd.DataFrame(results)
-    df = df.sort_values(by=['제품명', '할인'])
-    return df[["제품명", "수수료", "할인", "정가", "판매가", "원가", "이익", "ROI", "마진"]]
-
-def style_dataframe(val):
-    color = '#FF4500'
-    if val > 35: color = '#1E90FF'
-    elif 31 <= val <= 35: color = '#228B22'
-    elif 25 <= val < 31: color = '#808080'
-    elif 20 <= val < 25: color = '#FF8C00'
-    return f'color: {color}; font-weight: bold'
-
-if st.button("🚀 수익성 분석 실행"):
-    if not products_to_calc:
-        st.warning("⚠️ 분석할 제품을 선택하거나 입력해주세요.")
+if st.button("🚀 수익성 분석 실행", type="primary"):
+    if not items:
+        st.warning("제품을 선택해주세요.")
     else:
-        df_res = calculate_results(products_to_calc, selected_rates)
-        if not df_res.empty:
+        rows = []
+        base_fee = 0.28
+        user_rates = sorted(selected_rates)
+        
+        for it in items:
+            rates = sorted(list({it['fixed_discount']} | set(user_rates))) if it['type'] == 'db' else (user_rates if user_rates else [0])
+            for p in it['prices']:
+                if p == 0: continue
+                for r in rates:
+                    dr = r/100
+                    fee_rate = base_fee if dr <= 0.09 else (base_fee-0.01 if dr <= 0.19 else (base_fee-0.02 if dr <= 0.29 else base_fee-0.03))
+                    sell = p * (1-dr)
+                    fee = sell * fee_rate
+                    profit = sell - it['cost'] - fee
+                    margin = (profit/sell*100) if sell else 0
+                    roi = (profit/it['cost']*100) if it['cost'] else 0
+                    rows.append({"제품명":it['name'], "수수료":f"{int(fee_rate*100)}%", "할인":r, "정가":int(p), "판매가":int(sell), "원가":int(it['cost']), "이익":int(profit), "ROI":roi, "마진":margin})
+        
+        if rows:
+            dres = pd.DataFrame(rows).sort_values(['제품명', '할인'])
+            def color_margin(val):
+                c = '#FF4500' if val < 20 else ('#808080' if val < 31 else ('#228B22' if val <= 35 else '#1E90FF'))
+                return f'color: {c}; font-weight: bold'
+            
             st.success("분석 완료!")
             st.dataframe(
-                df_res.style.map(style_dataframe, subset=['마진']).format({
-                    '원가': '{:,}', '정가': '{:,}', '할인': '{}%', 
-                    '판매가': '{:,}', '이익': '{:,}', 
-                    '마진': '{:.1f}%', 'ROI': '{:.0f}%'
-                }),
+                dres.style.map(color_margin, subset=['마진']).format({'원가': '{:,}', '정가': '{:,}', '할인': '{}%', '판매가': '{:,}', '이익': '{:,}', '마진': '{:.1f}%', 'ROI': '{:.0f}%'}),
                 use_container_width=True, hide_index=True
             )
-        else:
-            st.error("계산 실패: 입력 값을 확인해주세요.")
