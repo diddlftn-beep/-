@@ -16,13 +16,18 @@ st.title("👕 의류 제작 원가 관리 시스템")
 # 1. 입력 섹션 (사이드바)
 with st.sidebar:
     st.header("📋 데이터 입력")
-    item_name = st.text_input("품목명 (예: 26SS 트렌치코트)", value="신규 품목")
-    fabric = st.number_input("원단값", value=12000)
-    lining = st.number_input("안감", value=5000)
-    labor = st.number_input("공임", value=55000)
-    trim = st.number_input("자재비", value=10000)
+    # 품목명도 빈칸으로 시작
+    item_name = st.text_input("품목명 (예: 26SS 트렌치코트)", value="") 
     
-    # 엑셀 이미지 상의 오차율(약 37.6%)을 고려한 배수 설정
+    # 금액 입력칸 초기값을 0으로 설정
+    fabric = st.number_input("원단값", value=0, step=100)
+    lining = st.number_input("안감", value=0, step=100)
+    labor = st.number_input("공임", value=0, step=100)
+    trim = st.number_input("자재비", value=0, step=100)
+    
+    st.markdown("---")
+    
+    # 오차율/마진 설정
     overhead_rate = st.slider("기타 부대비용 및 마진 (%)", 0, 50, 25)
     
     # 계산 로직
@@ -30,20 +35,27 @@ with st.sidebar:
     total_with_overhead = subtotal * (1 + overhead_rate / 100)
     final_vat = total_with_overhead * 1.1
     
+    # 저장 버튼
     if st.button("💾 히스토리 저장"):
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        new_data = {
-            '일시': now,
-            '품목명': item_name,
-            '원단값': fabric,
-            '안감': lining,
-            '공임': labor,
-            '자재': trim,
-            '합계': subtotal,
-            '최종원가(VAT)': round(final_vat)
-        }
-        st.session_state.history = pd.concat([pd.DataFrame([new_data]), st.session_state.history], ignore_index=True)
-        st.success("히스토리에 추가되었습니다!")
+        if item_name == "":
+            st.warning("품목명을 입력해주세요!") # 품목명 누락 방지
+        elif subtotal == 0:
+            st.warning("금액을 입력해주세요!") # 금액 0원 저장 방지
+        else:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            new_data = {
+                '일시': now,
+                '품목명': item_name,
+                '원단값': fabric,
+                '안감': lining,
+                '공임': labor,
+                '자재': trim,
+                '합계': subtotal,
+                '최종원가(VAT)': round(final_vat)
+            }
+            # 기존 데이터와 합치기
+            st.session_state.history = pd.concat([pd.DataFrame([new_data]), st.session_state.history], ignore_index=True)
+            st.success("히스토리에 추가되었습니다!")
 
 # 2. 메인 화면 - 현재 계산 결과
 col1, col2, col3 = st.columns(3)
@@ -56,10 +68,8 @@ st.markdown("---")
 # 3. 히스토리 섹션
 st.subheader("📜 계산 히스토리")
 if not st.session_state.history.empty:
-    # 표 출력
     st.dataframe(st.session_state.history, use_container_width=True)
     
-    # 엑셀 다운로드 버튼
     csv = st.session_state.history.to_csv(index=False).encode('utf-8-sig')
     st.download_button(
         label="📥 히스토리 엑셀(CSV) 다운로드",
@@ -72,4 +82,4 @@ if not st.session_state.history.empty:
         st.session_state.history = pd.DataFrame(columns=st.session_state.history.columns)
         st.rerun()
 else:
-    st.info("아직 저장된 내역이 없습니다. 왼쪽에서 '히스토리 저장'을 눌러보세요.")
+    st.info("왼쪽 사이드바에 값을 입력하고 '히스토리 저장'을 눌러주세요.")
