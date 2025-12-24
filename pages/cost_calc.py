@@ -5,7 +5,7 @@ from datetime import datetime
 # 페이지 설정
 st.set_page_config(page_title="브랜디드 원가 계산기", layout="wide")
 
-# 세션 상태 초기화 (데이터를 브라우저 메모리에 유지)
+# 세션 상태 초기화
 if 'history' not in st.session_state:
     st.session_state.history = pd.DataFrame(
         columns=['일시', '품목명', '원단값', '안감', '공임', '자재', '합계', '최종원가(VAT)']
@@ -16,44 +16,48 @@ st.title("👕 의류 제작 원가 관리 시스템")
 # 1. 입력 섹션 (사이드바)
 with st.sidebar:
     st.header("📋 데이터 입력")
-    # 품목명도 빈칸으로 시작
-    item_name = st.text_input("품목명 (예: 26SS 트렌치코트)", value="") 
+    # placeholder로 희미한 예시 텍스트 표시
+    item_name = st.text_input("품목명", value="", placeholder="예: 26SS 트렌치코트")
     
-    # 금액 입력칸 초기값을 0으로 설정
-    fabric = st.number_input("원단값", value=0, step=100)
-    lining = st.number_input("안감", value=0, step=100)
-    labor = st.number_input("공임", value=0, step=100)
-    trim = st.number_input("자재비", value=0, step=100)
+    # value=None으로 설정하여 입력창을 '빈칸'으로 시작
+    fabric = st.number_input("원단값", value=None, placeholder="예: 12,000", step=100)
+    lining = st.number_input("안감", value=None, placeholder="예: 5,000", step=100)
+    labor = st.number_input("공임", value=None, placeholder="예: 55,000", step=100)
+    trim = st.number_input("자재비", value=None, placeholder="예: 10,000", step=100)
     
     st.markdown("---")
     
-    # 오차율/마진 설정
     overhead_rate = st.slider("기타 부대비용 및 마진 (%)", 0, 50, 25)
     
+    # [중요] 빈칸(None)일 경우 계산 오류가 나지 않도록 0으로 처리하는 로직
+    c_fabric = fabric if fabric is not None else 0
+    c_lining = lining if lining is not None else 0
+    c_labor = labor if labor is not None else 0
+    c_trim = trim if trim is not None else 0
+    
     # 계산 로직
-    subtotal = fabric + lining + labor + trim
+    subtotal = c_fabric + c_lining + c_labor + c_trim
     total_with_overhead = subtotal * (1 + overhead_rate / 100)
     final_vat = total_with_overhead * 1.1
     
     # 저장 버튼
     if st.button("💾 히스토리 저장"):
         if item_name == "":
-            st.warning("품목명을 입력해주세요!") # 품목명 누락 방지
+            st.warning("품목명을 입력해주세요!") 
         elif subtotal == 0:
-            st.warning("금액을 입력해주세요!") # 금액 0원 저장 방지
+            st.warning("금액을 입력해주세요!") 
         else:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             new_data = {
                 '일시': now,
                 '품목명': item_name,
-                '원단값': fabric,
-                '안감': lining,
-                '공임': labor,
-                '자재': trim,
+                '원단값': c_fabric,
+                '안감': c_lining,
+                '공임': c_labor,
+                '자재': c_trim,
                 '합계': subtotal,
                 '최종원가(VAT)': round(final_vat)
             }
-            # 기존 데이터와 합치기
             st.session_state.history = pd.concat([pd.DataFrame([new_data]), st.session_state.history], ignore_index=True)
             st.success("히스토리에 추가되었습니다!")
 
@@ -82,4 +86,4 @@ if not st.session_state.history.empty:
         st.session_state.history = pd.DataFrame(columns=st.session_state.history.columns)
         st.rerun()
 else:
-    st.info("왼쪽 사이드바에 값을 입력하고 '히스토리 저장'을 눌러주세요.")
+    st.info("왼쪽 사이드바에 값을 입력하면 자동으로 계산됩니다.")
